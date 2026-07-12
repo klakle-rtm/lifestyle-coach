@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="ko" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0">
+<title>AI 라이프 코치</title>
+<meta name="theme-color" content="#0b0f19">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="라이프코치">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧭</text></svg>">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        colors: {
+          bg: '#0b0f19',
+          panel: '#131a2a',
+          panel2: '#1b2436',
+          accent: '#6366f1',
+          accent2: '#22c55e',
+        }
+      }
+    }
+  }
+</script>
+<style>
+  html, body { background-color: #0b0f19; overscroll-behavior-y: none; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-thumb { background: #2a3550; border-radius: 3px; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  .navbtn.active { color: #6366f1; }
+  .navbtn.active .navdot { opacity: 1; }
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+  .safe-top { padding-top: env(safe-area-inset-top); }
+  .msg-bubble { white-space: pre-wrap; word-break: break-word; }
+  input, textarea, select { color-scheme: dark; }
+  .modal-backdrop { backdrop-filter: blur(2px); }
+</style>
+</head>
+<body class="bg-bg text-slate-100 min-h-screen flex flex-col font-sans">
+
+<!-- ===================== 상단 헤더 ===================== -->
+<header class="safe-top sticky top-0 z-30 bg-bg/90 backdrop-blur border-b border-white/5">
+  <div class="max-w-lg mx-auto flex items-center justify-between px-4 py-3">
+    <div class="flex items-center gap-2">
+      <span class="text-xl">🧭</span>
+      <h1 class="font-bold text-lg tracking-tight">AI 라이프 코치</h1>
+    </div>
+    <div class="flex items-center gap-2">
+      <span id="connIndicator" class="w-2 h-2 rounded-full bg-red-500" title="연결 상태"></span>
+      <button id="btnSettings" class="p-2 rounded-lg bg-panel hover:bg-panel2 transition" aria-label="설정">⚙️</button>
+    </div>
+  </div>
+</header>
+
+<!-- ===================== 메인 컨텐츠 ===================== -->
+<main class="flex-1 max-w-lg w-full mx-auto px-4 pb-28 pt-4 overflow-x-hidden">
+
+  <!-- ---------- TAB: 목표 ---------- -->
+  <section id="tab-goals" class="tab-panel space-y-4">
+    <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wide">특정 기간 목표</h2>
+    <form id="formGoal" class="bg-panel rounded-2xl p-4 space-y-3">
+      <input id="goalTitle" required placeholder="예: 5월 중순까지 벌크업 후 컷팅" class="w-full bg-panel2 rounded-xl px-3 py-2 outline-none focus:ring-2 ring-accent">
+      <textarea id="goalDesc" placeholder="세부 배경/조건 (예: 주 4회 웨이트, 하루 2200kcal 목표...)" rows="2" class="w-full bg-panel2 rounded-xl px-3 py-2 outline-none focus:ring-2 ring-accent"></textarea>
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="text-xs text-slate-400">시작일</label>
+          <input id="goalStart" type="date" class="w-full bg-panel2 rounded-xl px-3 py-2 outline-none focus:ring-2 ring-accent">
+        </div>
+        <div>
+          <label class="text-xs text-slate-400">종료일</label>
+          <input id="goalEnd" type="date" class="w-full bg-panel2 rounded-xl px-3 py-2 outline-none focus:ring-2 ring-accent">
+        </div>
+      </div>
+      <select id="goalCategory" class="w-full bg-panel2 rounded-xl px-3 py-2 outline-none focus:ring-2 ring-accent">
+        <option value="fitness">운동/신체</option>
+        <option value="study">학업/공부</option>
+        <option value="lifestyle">생활/기타</option>
+      </select>
+      <button class="w-full bg-accent hover:opacity-90 transition rounded-xl py-2 font-semibold">목표 저장</button>
+    </form>
+    <div id="goalList" class="space-y-2"></div>
+  </section>
+
+  <!-- ---------- TAB: 캘린더/타임라인 ---------- -->
+  <section id="tab-calendar" class="tab-panel space-y-4">
+    <div class="flex items-center justify-between">
+      <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wide">일정 · 타임라인</h2>
+      <input id="calDate" type="date" class="bg-panel2 rounded-xl px-3 py-1.5 text-sm outline-none focus:ring-2 ring-accent">
+    </div>
+
+    <form id="formSchedule" class="bg-panel rounded-2xl p-4 space-y-3">
+      <input id="schTitle" placeholder="일정 제목 (예: 팀 미팅)" class="w-full bg-panel2 rounded-xl px-3 py-2 outline-none focus:ring-2 ring-accent">
+      <div class="grid grid-cols-2 gap-2">
+        <input id="schStart" type="time" class="w-full bg-panel2 rounded-xl px-3 py-2 outline-none focus:ring-2 ring-accent">
+        <input id="schEnd" type="time" class="w-full bg-panel2 rounded-xl px-3 py-2 outline-none focus:ring-2 ring-accent">
+      </div>
+      <button class="w-full bg-panel2 hover:bg-white/10 transition rounded-xl py-2 font-semibold text-sm">+ 일정 추가</button>
+    </form>
+    <div id="scheduleList" class="space-y-2"></div>
+
+    <div class="bg-panel rounded-2xl p-4 space-y-2">
+      <p class="text-xs text-slate-400">오늘 타임라인 / 할 일을 대충 적어두면 AI 코치가 가용 시간·체력 소모를 계산할 때 참고합니다. (구글/삼성 캘린더에서 복사해 붙여넣어도 됩니다)</p>
+      <textarea id="timelineText" rows="4" placeholder="예: 9시 출근, 12시 점심약속, 15-17시 회의 연달아, 저녁엔 특별한 일정 없음..." class="w-full bg-panel2 rounded-xl px-3 py-2 outline-none focus:ring-2 ring-accent text-sm"></textarea>
+      <button id="btnSaveTimeline" class="w-full bg-accent hover:opacity-90 transition rounded-xl py-2 font-semibold text-sm">타임라인 저장 (벡터 기록 포함)</button>
+    </div>
+  </section>
+
+  <!-- ---------- TAB: 기록 & 차트 ---------- -->
+  <section id="tab-log" class="tab-panel space-y-5">
+    <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wide">수치 기록</h2>
+
+    <!-- 체중 -->
+    <div class="bg-panel rounded-2xl p-4 space-y-3">
+      <p class="font-semibold text-sm">🏋️ 체중 / 체성분</p>
+      <div class="grid grid-cols-3 gap-2">
+        <input id="bmWeight" type="number" step="0.1" placeholder="체중(kg)" class="bg-panel2 rounded-xl px-2 py-2 text-sm outline-none focus:ring-2 ring-accent">
+        <input id="bmFat" type="number" step="0.1" placeholder="체지방%" class="bg-panel2 rounded-xl px-2 py-2 text-sm outline-none focus:ring-2 ring-accent">
+        <input id="bmMuscle" type="number" step="0.1" placeholder="골격근(kg)" class="bg-panel2 rounded-xl px-2 py-2 text-sm outline-none focus:ring-2 ring-accent">
+      </div>
+      <button id="btnAddBody" class="w-full bg-panel2 hover:bg-white/10 rounded-xl py-2 text-sm font-semibold">기록 추가</button>
+      <canvas id="chartWeight" height="140"></canvas>
+    </div>
+
+    <!-- 운동 -->
+    <div class="bg-panel rounded-2xl p-4 space-y-3">
+      <p class="font-semibold text-sm">💪 운동 세트</p>
+      <input id="woExercise" placeholder="운동명 (예: 벤치프레스)" class="w-full bg-panel2 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 ring-accent">
+      <div class="grid grid-cols-3 gap-2">
+        <input id="woSet" type="number" placeholder="세트#" class="bg-panel2 rounded-xl px-2 py-2 text-sm outline-none focus:ring-2 ring-accent">
+        <input id="woWeight" type="number" step="0.5" placeholder="무게(kg)" class="bg-panel2 rounded-xl px-2 py-2 text-sm outline-none focus:ring-2 ring-accent">
+        <input id="woReps" type="number" placeholder="횟수" class="bg-panel2 rounded-xl px-2 py-2 text-sm outline-none focus:ring-2 ring-accent">
+      </div>
+      <button id="btnAddWorkout" class="w-full bg-panel2 hover:bg-white/10 rounded-xl py-2 text-sm font-semibold">세트 추가</button>
+      <canvas id="chartVolume" height="140"></canvas>
+    </div>
+
+    <!-- 식단 -->
+    <div class="bg-panel rounded-2xl p-4 space-y-3">
+      <p class="font-semibold text-sm">🍚 식단</p>
+      <div class="grid grid-cols-2 gap-2">
+        <select id="dietMeal" class="bg-panel2 rounded-xl px-2 py-2 text-sm outline-none focus:ring-2 ring-accent">
+          <option value="breakfast">아침</option>
+          <option value="lunch">점심</option>
+          <option value="dinner">저녁</option>
+          <option value="snack">간식</option>
+        </select>
+        <input id="dietFood" placeholder="음식명" class="bg-panel2 rounded-xl px-2 py-2 text-sm outline-none focus:ring-2 ring-accent">
+      </div>
+      <div class="grid grid-cols-4 gap-2">
+        <input id="dietKcal" type="number" placeholder="kcal" class="bg-panel2 rounded-xl px-2 py-2 text-sm outline-none focus:ring-2 ring-accent">
+        <input id="dietP" type="number" step="0.1" placeholder="단백질g" class="bg-panel2 rounded-xl px-2 py-2 text-sm outline-none focus:ring-2 ring-accent">
+        <input id="dietC" type="number" step="0.1" placeholder="탄수g" class="bg-panel2 rounded-xl px-2 py-2 text-sm outline-none focus:ring-2 ring-accent">
+        <input id="dietF" type="number" step="0.1" placeholder="지방g" class="bg-panel2 rounded-xl px-2 py-2 text-sm outline-none focus:ring-2 ring-accent">
+      </div>
+      <button id="btnAddDiet" class="w-full bg-panel2 hover:bg-white/10 rounded-xl py-2 text-sm font-semibold">식단 추가</button>
+      <canvas id="chartCalorie" height="140"></canvas>
+    </div>
+
+    <!-- 영양제 -->
+    <div class="bg-panel rounded-2xl p-4 space-y-3">
+      <p class="font-semibold text-sm">💊 영양제</p>
+      <div class="flex gap-2">
+        <input id="suppName" placeholder="영양제명 (예: 오메가3)" class="flex-1 bg-panel2 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 ring-accent">
+        <button id="btnAddSupp" class="bg-panel2 hover:bg-white/10 rounded-xl px-4 py-2 text-sm font-semibold">복용 기록</button>
+      </div>
+    </div>
+
+    <!-- 학업 -->
+    <div class="bg-panel rounded-2xl p-4 space-y-3">
+      <p class="font-semibold text-sm">📚 학업 진도</p>
+      <input id="stSubject" placeholder="과목/주제 (예: 운영체제 커널)" class="w-full bg-panel2 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 ring-accent">
+      <div class="grid grid-cols-2 gap-2">
+        <input id="stHours" type="number" step="0.1" placeholder="공부 시간(h)" class="bg-panel2 rounded-xl px-2 py-2 text-sm outline-none focus:ring-2 ring-accent">
+        <input id="stNote" placeholder="진도 메모" class="bg-panel2 rounded-xl px-2 py-2 text-sm outline-none focus:ring-2 ring-accent">
+      </div>
+      <button id="btnAddStudy" class="w-full bg-panel2 hover:bg-white/10 rounded-xl py-2 text-sm font-semibold">진도 추가</button>
+    </div>
+  </section>
+
+  <!-- ---------- TAB: AI 코치 채팅 ---------- -->
+  <section id="tab-chat" class="tab-panel flex flex-col h-[calc(100vh-9.5rem)]">
+    <button id="btnBriefing" class="mb-2 w-full bg-panel2 hover:bg-white/10 transition rounded-xl py-2 text-xs font-semibold text-accent">📋 오늘의 브리핑 다시 받기 (일정·목표 기반 선제 분석)</button>
+    <div id="chatLog" class="flex-1 overflow-y-auto space-y-3 pb-3"></div>
+    <form id="formChat" class="sticky bottom-0 bg-bg pt-2 flex gap-2">
+      <textarea id="chatInput" rows="1" placeholder="오늘 기록이나 질문을 자유롭게 입력하세요 (예: 오늘 스쿼트 100kg 5x5 했고 좀 피곤함)" class="flex-1 bg-panel2 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 ring-accent resize-none"></textarea>
+      <button id="btnSend" class="bg-accent hover:opacity-90 transition rounded-xl px-4 font-semibold text-sm">전송</button>
+    </form>
+  </section>
+
+</main>
+
+<!-- ===================== 하단 네비게이션 ===================== -->
+<nav class="safe-bottom fixed bottom-0 left-0 right-0 z-30 bg-panel/95 backdrop-blur border-t border-white/5">
+  <div class="max-w-lg mx-auto grid grid-cols-4 text-xs">
+    <button data-tab="goals" class="navbtn active flex flex-col items-center gap-1 py-2.5 text-slate-400">
+      <span class="text-lg">🎯</span>목표
+    </button>
+    <button data-tab="calendar" class="navbtn flex flex-col items-center gap-1 py-2.5 text-slate-400">
+      <span class="text-lg">🗓️</span>일정
+    </button>
+    <button data-tab="log" class="navbtn flex flex-col items-center gap-1 py-2.5 text-slate-400">
+      <span class="text-lg">📊</span>기록
+    </button>
+    <button data-tab="chat" class="navbtn flex flex-col items-center gap-1 py-2.5 text-slate-400">
+      <span class="text-lg">💬</span>코치
+    </button>
+  </div>
+</nav>
+
+<!-- ===================== 설정 모달 ===================== -->
+<div id="settingsModal" class="hidden fixed inset-0 z-40 modal-backdrop bg-black/60 flex items-end sm:items-center justify-center">
+  <div class="bg-panel w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-5 space-y-3 max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between">
+      <h3 class="font-bold text-lg">⚙️ 설정</h3>
+      <button id="btnCloseSettings" class="p-1 text-slate-400">✕</button>
+    </div>
+
+    <p class="text-xs text-slate-400">모든 값은 이 브라우저의 localStorage에만 저장되며 외부 서버로 전송되지 않습니다. Supabase anon key와 LLM API key는 절대 타인과 공유하지 마세요.</p>
+
+    <div class="space-y-1">
+      <label class="text-xs text-slate-400">Supabase URL</label>
+      <input id="setSbUrl" placeholder="https://xxxx.supabase.co" class="w-full bg-panel2 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 ring-accent">
+    </div>
+    <div class="space-y-1">
+      <label class="text-xs text-slate-400">Supabase anon public key</label>
+      <input id="setSbKey" type="password" class="w-full bg-panel2 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 ring-accent">
+    </div>
+
+    <div class="space-y-1">
+      <label class="text-xs text-slate-400">채팅 LLM 제공자</label>
+      <select id="setProvider" class="w-full bg-panel2 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 ring-accent">
+        <option value="openai">OpenAI</option>
+        <option value="anthropic">Anthropic (Claude)</option>
+      </select>
+    </div>
+    <div class="space-y-1">
+      <label class="text-xs text-slate-400">채팅 모델명</label>
+      <input id="setChatModel" placeholder="예: gpt-4o-mini 또는 claude-sonnet-4-5" class="w-full bg-panel2 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 ring-accent">
+    </div>
+
+    <div class="space-y-1">
+      <label class="text-xs text-slate-400">OpenAI API Key <span class="text-slate-500">(임베딩 검색에 항상 필요 · 채팅 제공자가 OpenAI면 채팅에도 사용)</span></label>
+      <input id="setOpenAiKey" type="password" placeholder="sk-..." class="w-full bg-panel2 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 ring-accent">
+    </div>
+    <div class="space-y-1">
+      <label class="text-xs text-slate-400">Anthropic API Key <span class="text-slate-500">(채팅 제공자가 Anthropic일 때 필요)</span></label>
+      <input id="setAnthropicKey" type="password" placeholder="sk-ant-..." class="w-full bg-panel2 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 ring-accent">
+    </div>
+
+    <div class="flex gap-2 pt-2">
+      <button id="btnTestConn" class="flex-1 bg-panel2 hover:bg-white/10 rounded-xl py-2 text-sm font-semibold">연결 테스트</button>
+      <button id="btnSaveSettings" class="flex-1 bg-accent hover:opacity-90 rounded-xl py-2 text-sm font-semibold">저장</button>
+    </div>
+    <p id="settingsStatus" class="text-xs text-center text-slate-400 min-h-[1rem]"></p>
+  </div>
+</div>
+
+<!-- 토스트 -->
+<div id="toast" class="hidden fixed bottom-24 left-1/2 -translate-x-1/2 z-50 bg-panel2 border border-white/10 text-sm px-4 py-2 rounded-xl shadow-lg max-w-[90vw] text-center"></div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+/* ============================================================
+   0. 상태 / 설정 관리
+   ============================================================ */
+const LS_KEYS = {
+  sbUrl: 'lc_sb_url', sbKey: 'lc_sb_key',
+  provider: 'lc_provider', chatModel: 'lc_chat_model',
+  openaiKey: 'lc_openai_key', anthropicKey: 'lc_anthropic_key',
+};
+
+const state = {
+  settings: {
+    sbUrl: localStorage.getItem(LS_KEYS.sbUrl) || '',
+    sbKey: localStorage.getItem(LS_KEYS.sbKey) || '',
+    provider: localStorage.getItem(LS_KEYS.provider) || 'openai',
+    chatModel: localStorage.getItem(LS_KEYS.chatModel) || '',
+    openaiKey: localStorage.getItem(LS_KEYS.openaiKey) || '',
+    anthropicKey: localStorage.getItem(LS_KEYS.anthropicKey) || '',
+  },
+  supabase: null,
+  activeGoal: null,
+  charts: {},
+  channel: null,
+  briefedToday: false,
+};
+
+function todayStr() {
+  const d = new Date();
+  const off = d.getTimezoneOffset();
+  return new Date(d.getTime() - off * 60000).toISOString().slice(0, 10);
+}
+
+function initSupabase() {
+  if (state.settings.sbUrl && state.settings.sbKey) {
+    try {
+      state.supabase = createClient(state.settings.sbUrl, state.settings.sbKey);
+      document.getElementById('connIndicator').classList.remove('bg-red-500');
+      document.getElementById('connIndicator').classList.add('bg-emerald-500');
+    } catch (e) {
+      state.supabase = null;
+      console.error(e);
+    }
+  } else {
+    state.supabase = null;
+  }
+  setupRealtime();
+}
+
+// Supabase Realtime 구독: 다른 기기/탭에서 데이터가 바뀌어도 이 화면이 자동으로 최신 상태로
+// 동기화되도록 한다 (LocalStorage 캐시가 아니라 원격 DB를 진짜 실시간으로 반영).
+function setupRealtime() {
+  if (state.channel) {
+    try { state.supabase ? state.supabase.removeChannel(state.channel) : null; } catch (e) { /* noop */ }
+    state.channel = null;
+  }
+  if (!state.supabase) return;
+
+  const tables = ['goals', 'daily_schedules', 'body_metrics', 'workout_logs', 'diet_logs', 'supplement_logs', 'study_logs', 'chat_history'];
+  const channel = state.supabase.channel('lc-realtime-sync');
+  tables.forEach(table => {
+    channel.on('postgres_changes', { event: '*', schema: 'public', table }, () => handleRealtimeChange(table));
+  });
+  channel.subscribe();
+  state.channel = channel;
+}
+
+function handleRealtimeChange(table) {
+  if (table === 'goals') loadGoals();
+  else if (table === 'daily_schedules') loadSchedule();
+  else if (table === 'body_metrics' || table === 'workout_logs' || table === 'diet_logs') refreshCharts();
+  else if (table === 'chat_history' && !chatBusy) loadChatHistory();
+}
+
+function requireSupabase() {
+  if (!state.supabase) {
+    toast('먼저 설정(⚙️)에서 Supabase URL / key를 입력하세요.');
+    throw new Error('Supabase not configured');
+  }
+  return state.supabase;
+}
+
+function toast(msg, ms = 3000) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.remove('hidden');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.classList.add('hidden'), ms);
+}
+
+/* ============================================================
+   1. 탭 / 네비게이션
+   ============================================================ */
+document.querySelectorAll('.navbtn').forEach(btn => {
+  btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+});
+function switchTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  document.querySelectorAll('.navbtn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  if (name === 'goals') loadGoals();
+  if (name === 'calendar') loadSchedule();
+  if (name === 'log') refreshCharts();
+  if (name === 'chat') loadChatHistory();
+}
+switchTab('goals');
+
+/* ============================================================
+   2. 설정 모달
+   ============================================================ */
+const settingsModal = document.getElementById('settingsModal');
+document.getElementById('btnSettings').addEventListener('click', () => {
+  document.getElementById('setSbUrl').value = state.settings.sbUrl;
+  document.getElementById('setSbKey').value = state.settings.sbKey;
+  document.getElementById('setProvider').value = state.settings.provider;
+  document.getElementById('setChatModel').value = state.settings.chatModel;
+  document.getElementById('setOpenAiKey').value = state.settings.openaiKey;
+  document.getElementById('setAnthropicKey').value = state.settings.anthropicKey;
+  settingsModal.classList.remove('hidden');
+});
+document.getElementById('btnCloseSettings').addEventListener('click', () => settingsModal.classList.add('hidden'));
+
+document.getElementById('btnSaveSettings').addEventListener('click', () => {
+  state.settings.sbUrl = document.getElementById('setSbUrl').value.trim();
+  state.settings.sbKey = document.getElementById('setSbKey').value.trim();
+  state.settings.provider = document.getElementById('setProvider').value;
+  state.settings.chatModel = document.getElementById('setChatModel').value.trim();
+  state.settings.openaiKey = document.getElementById('setOpenAiKey').value.trim();
+  state.settings.anthropicKey = document.getElementById('setAnthropicKey').value.trim();
+
+  localStorage.setItem(LS_KEYS.sbUrl, state.settings.sbUrl);
+  localStorage.setItem(LS_KEYS.sbKey, state.settings.sbKey);
+  localStorage.setItem(LS_KEYS.provider, state.settings.provider);
+  localStorage.setItem(LS_KEYS.chatModel, state.settings.chatModel);
+  localStorage.setItem(LS_KEYS.openaiKey, state.settings.openaiKey);
+  localStorage.setItem(LS_KEYS.anthropicKey, state.settings.anthropicKey);
+
+  initSupabase();
+  document.getElementById('settingsStatus').textContent = '저장되었습니다.';
+  toast('설정이 저장되었습니다.');
+  settingsModal.classList.add('hidden');
+  loadGoals();
+});
+
+document.getElementById('btnTestConn').addEventListener('click', async () => {
+  const statusEl = document.getElementById('settingsStatus');
+  statusEl.textContent = '연결 테스트 중...';
+  try {
+    const tmp = createClient(
+      document.getElementById('setSbUrl').value.trim(),
+      document.getElementById('setSbKey').value.trim()
+    );
+    const { error } = await tmp.from('goals').select('id').limit(1);
+    if (error) throw error;
+    statusEl.textContent = '✅ Supabase 연결 성공';
+  } catch (e) {
+    statusEl.textContent = '❌ 연결 실패: ' + e.message;
+  }
+});
+
+/* ============================================================
+   3. 목표(Goals)
+   ============================================================ */
+document.getElementById('formGoal').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const sb = requireSupabase();
+  const payload = {
+    title: document.getElementById('goalTitle').value.trim(),
+    description: document.getElementById('goalDesc').value.trim() || null,
+    category: document.getElementById('goalCategory').value,
+    start_date: document.getElementById('goalStart').value || todayStr(),
+    end_date: document.getElementById('goalEnd').value || null,
+  };
+  const { error } = await sb.from('goals').insert(payload);
+  if (error) return toast('저장 실패: ' + error.message);
+  e.target.reset();
+  toast('목표가 저장되었습니다.');
+  loadGoals();
+});
+
+async function loadGoals() {
+  if (!state.supabase) return;
+  const { data, error } = await state.supabase
+    .from('goals').select('*').order('created_at', { ascending: false });
+  if (error) return toast('목표 로드 실패: ' + error.message);
+
+  state.activeGoal = data.find(g => g.status === 'active') || null;
+
+  const list = document.getElementById('goalList');
+  list.innerHTML = '';
+  data.forEach(g => {
+    const div = document.createElement('div');
+    div.className = 'bg-panel rounded-2xl p-4 flex items-start justify-between gap-2';
+    div.innerHTML = `
+      <div>
+        <p class="font-semibold text-sm">${escapeHtml(g.title)} ${g.status !== 'active' ? `<span class="text-xs text-slate-500">(${g.status})</span>` : ''}</p>
+        ${g.description ? `<p class="text-xs text-slate-400 mt-1">${escapeHtml(g.description)}</p>` : ''}
+        <p class="text-[11px] text-slate-500 mt-1">${g.start_date} ~ ${g.end_date || '미정'}</p>
+      </div>
+      <div class="flex flex-col gap-1">
+        ${g.status === 'active' ? `<button data-id="${g.id}" class="btnCompleteGoal text-[11px] bg-panel2 rounded-lg px-2 py-1">완료</button>` : ''}
+        <button data-id="${g.id}" class="btnDeleteGoal text-[11px] bg-panel2 rounded-lg px-2 py-1 text-red-400">삭제</button>
+      </div>`;
+    list.appendChild(div);
+  });
+  list.querySelectorAll('.btnCompleteGoal').forEach(b => b.addEventListener('click', async () => {
+    await state.supabase.from('goals').update({ status: 'completed' }).eq('id', b.dataset.id);
+    loadGoals();
+  }));
+  list.querySelectorAll('.btnDeleteGoal').forEach(b => b.addEventListener('click', async () => {
+    await state.supabase.from('goals').delete().eq('id', b.dataset.id);
+    loadGoals();
+  }));
+}
+
+/* ============================================================
+   4. 캘린더 / 타임라인
+   ============================================================ */
+const calDateEl = document.getElementById('calDate');
+calDateEl.value = todayStr();
+calDateEl.addEventListener('change', loadSchedule);
+
+document.getElementById('formSchedule').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const sb = requireSupabase();
+  const payload = {
+    log_date: calDateEl.value || todayStr(),
+    event_title: document.getElementById('schTitle').value.trim(),
+    start_time: document.getElementById('schStart').value || null,
+    end_time: document.getElementById('schEnd').value || null,
+    event_type: 'manual',
+  };
+  const { error } = await sb.from('daily_schedules').insert(payload);
+  if (error) return toast('저장 실패: ' + error.message);
+  e.target.reset();
+  loadSchedule();
+});
+
+async function loadSchedule() {
+  if (!state.supabase) return;
+  const date = calDateEl.value || todayStr();
+  const { data, error } = await state.supabase
+    .from('daily_schedules').select('*').eq('log_date', date).order('start_time', { ascending: true });
+  if (error) return toast('일정 로드 실패: ' + error.message);
+
+  const list = document.getElementById('scheduleList');
+  list.innerHTML = '';
+  const latestTimeline = [...data].reverse().find(r => r.raw_timeline_text);
+  document.getElementById('timelineText').value = latestTimeline ? latestTimeline.raw_timeline_text : '';
+
+  data.filter(r => r.event_title).forEach(r => {
+    const div = document.createElement('div');
+    div.className = 'bg-panel rounded-xl px-4 py-2.5 flex items-center justify-between text-sm';
+    div.innerHTML = `<span>${r.start_time ? r.start_time.slice(0,5) : '--:--'}${r.end_time ? '~' + r.end_time.slice(0,5) : ''} · ${escapeHtml(r.event_title)}</span>
+      <button data-id="${r.id}" class="btnDelSch text-red-400 text-xs">삭제</button>`;
+    list.appendChild(div);
+  });
+  list.querySelectorAll('.btnDelSch').forEach(b => b.addEventListener('click', async () => {
+    await state.supabase.from('daily_schedules').delete().eq('id', b.dataset.id);
+    loadSchedule();
+  }));
+}
+
+document.getElementById('btnSaveTimeline').addEventListener('click', async () => {
+  const sb = requireSupabase();
+  const text = document.getElementById('timelineText').value.trim();
+  if (!text) return toast('타임라인 내용을 입력하세요.');
+  const date = calDateEl.value || todayStr();
+
+  const { error } = await sb.from('daily_schedules').insert({
+    log_date: date, event_type: 'manual', raw_timeline_text: text,
+  });
+  if (error) return toast('저장 실패: ' + error.message);
+
+  try {
+    await saveContextMemory(date, 'timeline', text);
+    toast('타임라인이 저장되고 벡터 인덱싱되었습니다.');
+  } catch (e) {
+    toast('타임라인은 저장됐지만 벡터 인덱싱 실패: ' + e.message);
+  }
+});
+
+/* ============================================================
+   5. 수치 기록 (운동/식단/체중/영양제/학업) + 차트
+   ============================================================ */
+document.getElementById('btnAddBody').addEventListener('click', async () => {
+  const sb = requireSupabase();
+  const w = parseFloat(document.getElementById('bmWeight').value);
+  const f = parseFloat(document.getElementById('bmFat').value);
+  const m = parseFloat(document.getElementById('bmMuscle').value);
+  if (isNaN(w) && isNaN(f) && isNaN(m)) return toast('값을 하나 이상 입력하세요.');
+  const { error } = await sb.from('body_metrics').insert({
+    log_date: todayStr(),
+    weight_kg: isNaN(w) ? null : w,
+    body_fat_pct: isNaN(f) ? null : f,
+    skeletal_muscle_kg: isNaN(m) ? null : m,
+  });
+  if (error) return toast('저장 실패: ' + error.message);
+  ['bmWeight','bmFat','bmMuscle'].forEach(id => document.getElementById(id).value = '');
+  toast('체중 기록 추가됨');
+  refreshCharts();
+});
+
+document.getElementById('btnAddWorkout').addEventListener('click', async () => {
+  const sb = requireSupabase();
+  const name = document.getElementById('woExercise').value.trim();
+  if (!name) return toast('운동명을 입력하세요.');
+  const { error } = await sb.from('workout_logs').insert({
+    log_date: todayStr(),
+    exercise_name: name,
+    set_number: parseInt(document.getElementById('woSet').value) || null,
+    weight_kg: parseFloat(document.getElementById('woWeight').value) || null,
+    reps: parseInt(document.getElementById('woReps').value) || null,
+  });
+  if (error) return toast('저장 실패: ' + error.message);
+  ['woSet','woWeight','woReps'].forEach(id => document.getElementById(id).value = '');
+  toast('운동 세트 추가됨');
+  refreshCharts();
+});
+
+document.getElementById('btnAddDiet').addEventListener('click', async () => {
+  const sb = requireSupabase();
+  const food = document.getElementById('dietFood').value.trim();
+  if (!food) return toast('음식명을 입력하세요.');
+  const { error } = await sb.from('diet_logs').insert({
+    log_date: todayStr(),
+    meal_type: document.getElementById('dietMeal').value,
+    food_name: food,
+    calories: parseInt(document.getElementById('dietKcal').value) || null,
+    protein_g: parseFloat(document.getElementById('dietP').value) || null,
+    carbs_g: parseFloat(document.getElementById('dietC').value) || null,
+    fat_g: parseFloat(document.getElementById('dietF').value) || null,
+  });
+  if (error) return toast('저장 실패: ' + error.message);
+  ['dietFood','dietKcal','dietP','dietC','dietF'].forEach(id => document.getElementById(id).value = '');
+  toast('식단 추가됨');
+  refreshCharts();
+});
+
+document.getElementById('btnAddSupp').addEventListener('click', async () => {
+  const sb = requireSupabase();
+  const name = document.getElementById('suppName').value.trim();
+  if (!name) return toast('영양제명을 입력하세요.');
+  const { error } = await sb.from('supplement_logs').insert({ log_date: todayStr(), supplement_name: name, taken: true });
+  if (error) return toast('저장 실패: ' + error.message);
+  document.getElementById('suppName').value = '';
+  toast('영양제 복용 기록됨');
+});
+
+document.getElementById('btnAddStudy').addEventListener('click', async () => {
+  const sb = requireSupabase();
+  const subject = document.getElementById('stSubject').value.trim();
+  if (!subject) return toast('과목을 입력하세요.');
+  const { error } = await sb.from('study_logs').insert({
+    log_date: todayStr(),
+    subject,
+    hours: parseFloat(document.getElementById('stHours').value) || null,
+    progress_note: document.getElementById('stNote').value.trim() || null,
+  });
+  if (error) return toast('저장 실패: ' + error.message);
+  ['stSubject','stHours','stNote'].forEach(id => document.getElementById(id).value = '');
+  toast('학업 진도 추가됨');
+});
+
+async function refreshCharts() {
+  if (!state.supabase) return;
+  const since = daysAgoStr(21);
+
+  const [{ data: bm }, { data: wo }, { data: diet }] = await Promise.all([
+    state.supabase.from('body_metrics').select('log_date, weight_kg').gte('log_date', since).order('log_date'),
+    state.supabase.from('workout_logs').select('log_date, weight_kg, reps').gte('log_date', since).order('log_date'),
+    state.supabase.from('diet_logs').select('log_date, calories').gte('log_date', since).order('log_date'),
+  ]);
+
+  renderLineChart('chartWeight', (bm || []).filter(r => r.weight_kg != null).map(r => r.log_date),
+    (bm || []).filter(r => r.weight_kg != null).map(r => r.weight_kg), '체중(kg)', '#6366f1');
+
+  const volByDate = {};
+  (wo || []).forEach(r => {
+    if (r.weight_kg == null || r.reps == null) return;
+    volByDate[r.log_date] = (volByDate[r.log_date] || 0) + r.weight_kg * r.reps;
+  });
+  const volDates = Object.keys(volByDate).sort();
+  renderBarChart('chartVolume', volDates, volDates.map(d => volByDate[d]), '볼륨(kg×reps)', '#22c55e');
+
+  const kcalByDate = {};
+  (diet || []).forEach(r => {
+    if (r.calories == null) return;
+    kcalByDate[r.log_date] = (kcalByDate[r.log_date] || 0) + r.calories;
+  });
+  const kcalDates = Object.keys(kcalByDate).sort();
+  renderLineChart('chartCalorie', kcalDates, kcalDates.map(d => kcalByDate[d]), '섭취 칼로리(kcal)', '#f59e0b');
+}
+
+function renderLineChart(canvasId, labels, values, label, color) {
+  if (state.charts[canvasId]) state.charts[canvasId].destroy();
+  state.charts[canvasId] = new Chart(document.getElementById(canvasId), {
+    type: 'line',
+    data: { labels, datasets: [{ label, data: values, borderColor: color, backgroundColor: color + '33', tension: 0.3, fill: true }] },
+    options: chartOptions(),
+  });
+}
+function renderBarChart(canvasId, labels, values, label, color) {
+  if (state.charts[canvasId]) state.charts[canvasId].destroy();
+  state.charts[canvasId] = new Chart(document.getElementById(canvasId), {
+    type: 'bar',
+    data: { labels, datasets: [{ label, data: values, backgroundColor: color }] },
+    options: chartOptions(),
+  });
+}
+function chartOptions() {
+  return {
+    responsive: true,
+    plugins: { legend: { labels: { color: '#94a3b8', font: { size: 10 } } } },
+    scales: {
+      x: { ticks: { color: '#64748b', font: { size: 9 } }, grid: { color: '#1e293b' } },
+      y: { ticks: { color: '#64748b', font: { size: 9 } }, grid: { color: '#1e293b' } },
+    },
+  };
+}
+function daysAgoStr(n) {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.toISOString().slice(0, 10);
+}
+
+/* ============================================================
+   6. LLM 연동 : 임베딩 / 채팅 (OpenAI, Anthropic)
+   ============================================================ */
+async function getEmbedding(text) {
+  if (!state.settings.openaiKey) throw new Error('임베딩 검색을 위해 OpenAI API Key가 필요합니다.');
+  const res = await fetch('https://api.openai.com/v1/embeddings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.settings.openaiKey}` },
+    body: JSON.stringify({ model: 'text-embedding-3-small', input: text }),
+  });
+  if (!res.ok) throw new Error('임베딩 API 오류: ' + (await res.text()));
+  const json = await res.json();
+  return json.data[0].embedding;
+}
+
+async function callChatLLM(systemPrompt, messages, { json = false } = {}) {
+  if (!state.settings.chatModel) throw new Error('설정에서 채팅 모델명을 입력하세요.');
+  if (state.settings.provider === 'openai') {
+    if (!state.settings.openaiKey) throw new Error('OpenAI API Key가 필요합니다.');
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.settings.openaiKey}` },
+      body: JSON.stringify({
+        model: state.settings.chatModel,
+        messages: [{ role: 'system', content: systemPrompt }, ...messages],
+        ...(json ? { response_format: { type: 'json_object' } } : {}),
+      }),
+    });
+    if (!res.ok) throw new Error('OpenAI 채팅 API 오류: ' + (await res.text()));
+    const j = await res.json();
+    return j.choices[0].message.content;
+  } else {
+    if (!state.settings.anthropicKey) throw new Error('Anthropic API Key가 필요합니다.');
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': state.settings.anthropicKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: state.settings.chatModel,
+        max_tokens: 1500,
+        system: systemPrompt,
+        messages: messages.map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content })),
+      }),
+    });
+    if (!res.ok) throw new Error('Anthropic 채팅 API 오류: ' + (await res.text()));
+    const j = await res.json();
+    return j.content.map(c => c.text || '').join('');
+  }
+}
+
+/* ============================================================
+   7. 하이브리드 RAG 파이프라인
+   ============================================================ */
+
+// 7-1. 채팅 원문에서 정형 데이터(운동/식단/체중/영양제/학업) + 비정형 맥락을 추출해 각각 저장
+async function extractAndStore(userText, date) {
+  const schema = `아래 JSON 스키마로만 응답하세요. 마크다운이나 설명 없이 순수 JSON 객체 하나만 출력합니다.
+{
+ "workout": [{"exercise_name": string, "set_number": number|null, "weight_kg": number|null, "reps": number|null, "rpe": number|null}],
+ "diet": [{"meal_type": "breakfast"|"lunch"|"dinner"|"snack"|null, "food_name": string, "calories": number|null, "protein_g": number|null, "carbs_g": number|null, "fat_g": number|null}],
+ "body_metrics": {"weight_kg": number|null, "body_fat_pct": number|null, "skeletal_muscle_kg": number|null} | null,
+ "supplements": [{"supplement_name": string, "taken": boolean}],
+ "study": [{"subject": string, "hours": number|null, "progress_note": string|null}],
+ "context_note": string | null,
+ "context_type": "fatigue"|"thought"|"study_concern"|"question"|"chat"|null
+}
+규칙:
+- 사용자 메시지에 언급되지 않은 항목은 workout/diet/supplements/study는 빈 배열 [], body_metrics는 null 로 둡니다.
+- context_note 에는 피로도, 컨디션, 사소한 생각, 학업 고민, 질문 등 수치화되지 않는 맥락 내용을 자연어 그대로 담습니다. 그런 내용이 전혀 없으면 null.
+- 숫자는 반드시 숫자 타입으로, 단위는 붙이지 않습니다.
+- 오늘 날짜는 ${date} 입니다.`;
+
+  let parsed;
+  try {
+    const raw = await callChatLLM(schema, [{ role: 'user', content: userText }], { json: state.settings.provider === 'openai' });
+    const cleaned = raw.trim().replace(/^```json/i, '').replace(/^```/, '').replace(/```$/, '').trim();
+    parsed = JSON.parse(cleaned);
+  } catch (e) {
+    console.warn('구조화 추출 실패, 원문을 맥락으로만 저장합니다.', e);
+    parsed = { workout: [], diet: [], body_metrics: null, supplements: [], study: [], context_note: userText, context_type: 'chat' };
+  }
+
+  const sb = requireSupabase();
+  const inserts = [];
+
+  if (Array.isArray(parsed.workout) && parsed.workout.length) {
+    inserts.push(sb.from('workout_logs').insert(parsed.workout.map(w => ({ ...w, log_date: date }))));
+  }
+  if (Array.isArray(parsed.diet) && parsed.diet.length) {
+    inserts.push(sb.from('diet_logs').insert(parsed.diet.map(d => ({ ...d, log_date: date }))));
+  }
+  if (parsed.body_metrics && Object.values(parsed.body_metrics).some(v => v != null)) {
+    inserts.push(sb.from('body_metrics').insert({ ...parsed.body_metrics, log_date: date }));
+  }
+  if (Array.isArray(parsed.supplements) && parsed.supplements.length) {
+    inserts.push(sb.from('supplement_logs').insert(parsed.supplements.map(s => ({ ...s, log_date: date }))));
+  }
+  if (Array.isArray(parsed.study) && parsed.study.length) {
+    inserts.push(sb.from('study_logs').insert(parsed.study.map(s => ({ ...s, log_date: date }))));
+  }
+  await Promise.all(inserts);
+
+  const hasStructured = inserts.length > 0;
+  const noteText = parsed.context_note || (!hasStructured ? userText : null);
+  if (noteText) {
+    await saveContextMemory(date, parsed.context_type || 'chat', noteText);
+  }
+
+  return parsed;
+}
+
+async function saveContextMemory(date, sourceType, content) {
+  const sb = requireSupabase();
+  const embedding = await getEmbedding(content);
+  const { error } = await sb.from('context_memories').insert({
+    log_date: date, source_type: sourceType, content, embedding,
+  });
+  if (error) throw error;
+}
+
+// 7-2. 오늘 상황 + 최근 SQL 통계 + 벡터 유사 과거 기억을 모아 코칭 시스템 프롬프트 구성
+async function buildCoachingContext(date, queryTextForVectorSearch) {
+  const sb = requireSupabase();
+  const since14 = daysAgoStr(14);
+  const since7 = daysAgoStr(7);
+
+  const [
+    { data: goals },
+    { data: todaySchedule },
+    { data: bodyRecent },
+    { data: woRecent },
+    { data: dietRecent },
+    { data: studyRecent },
+    { data: suppRecent },
+  ] = await Promise.all([
+    sb.from('goals').select('*').eq('status', 'active').order('created_at', { ascending: false }),
+    sb.from('daily_schedules').select('*').eq('log_date', date),
+    sb.from('body_metrics').select('*').gte('log_date', since14).order('log_date'),
+    sb.from('workout_logs').select('*').gte('log_date', since14).order('log_date'),
+    sb.from('diet_logs').select('*').gte('log_date', since7).order('log_date'),
+    sb.from('study_logs').select('*').gte('log_date', since7).order('log_date'),
+    sb.from('supplement_logs').select('*').gte('log_date', since7),
+  ]);
+
+  let memories = [];
+  try {
+    const qEmbedding = await getEmbedding(queryTextForVectorSearch);
+    const { data, error } = await sb.rpc('match_context_memories', {
+      query_embedding: qEmbedding, match_count: 5, filter_date_from: null,
+    });
+    if (!error) memories = data || [];
+  } catch (e) {
+    console.warn('벡터 검색 실패:', e.message);
+  }
+
+  const volByDate = {};
+  (woRecent || []).forEach(r => {
+    if (r.weight_kg == null || r.reps == null) return;
+    volByDate[r.log_date] = (volByDate[r.log_date] || 0) + r.weight_kg * r.reps;
+  });
+  const kcalByDate = {}, proteinByDate = {}, carbsByDate = {}, fatByDate = {};
+  (dietRecent || []).forEach(r => {
+    if (r.calories != null) kcalByDate[r.log_date] = (kcalByDate[r.log_date] || 0) + r.calories;
+    if (r.protein_g != null) proteinByDate[r.log_date] = (proteinByDate[r.log_date] || 0) + r.protein_g;
+    if (r.carbs_g != null) carbsByDate[r.log_date] = (carbsByDate[r.log_date] || 0) + r.carbs_g;
+    if (r.fat_g != null) fatByDate[r.log_date] = (fatByDate[r.log_date] || 0) + r.fat_g;
+  });
+  const macroDates = Array.from(new Set([
+    ...Object.keys(kcalByDate), ...Object.keys(proteinByDate), ...Object.keys(carbsByDate), ...Object.keys(fatByDate),
+  ])).sort();
+
+  const lines = [];
+  lines.push(`[오늘 날짜] ${date}`);
+  lines.push(`[활성 목표]\n` + (goals && goals.length
+    ? goals.map(g => `- ${g.title} (${g.start_date}~${g.end_date || '미정'})${g.description ? ' : ' + g.description : ''}`).join('\n')
+    : '- 등록된 활성 목표 없음'));
+
+  const todayEvents = (todaySchedule || []).filter(s => s.event_title);
+  const todayTimeline = (todaySchedule || []).find(s => s.raw_timeline_text);
+  lines.push(`[오늘 일정]\n` + (todayEvents.length
+    ? todayEvents.map(e => `- ${e.start_time || ''}~${e.end_time || ''} ${e.event_title}`).join('\n')
+    : '- 등록된 개별 일정 없음'));
+  if (todayTimeline) lines.push(`[오늘 자유 타임라인 메모]\n${todayTimeline.raw_timeline_text}`);
+
+  lines.push(`[최근 14일 체중 추이]\n` + ((bodyRecent || []).filter(b => b.weight_kg != null).map(b => `${b.log_date}: ${b.weight_kg}kg`).join(', ') || '기록 없음'));
+  lines.push(`[최근 14일 운동 볼륨(무게×횟수 합)]\n` + (Object.keys(volByDate).length
+    ? Object.entries(volByDate).map(([d, v]) => `${d}: ${v}`).join(', ') : '기록 없음'));
+  lines.push(`[최근 7일 일일 섭취 칼로리 합]\n` + (Object.keys(kcalByDate).length
+    ? Object.entries(kcalByDate).map(([d, v]) => `${d}: ${v}kcal`).join(', ') : '기록 없음'));
+  lines.push(`[최근 7일 일일 매크로(단백질/탄수화물/지방) 섭취 합 — 부상·컨디션 저하 원인 대조용]\n` + (macroDates.length
+    ? macroDates.map(d => `${d}: 단백질 ${proteinByDate[d]?.toFixed(1) ?? '-'}g / 탄수 ${carbsByDate[d]?.toFixed(1) ?? '-'}g / 지방 ${fatByDate[d]?.toFixed(1) ?? '-'}g`).join('\n')
+    : '기록 없음'));
+  lines.push(`[최근 7일 학업 기록]\n` + ((studyRecent || []).length
+    ? studyRecent.map(s => `${s.log_date} ${s.subject || ''} ${s.hours || ''}h ${s.progress_note || ''}`).join('\n') : '기록 없음'));
+  lines.push(`[최근 7일 영양제 복용 기록 수]\n` + (suppRecent ? suppRecent.length : 0));
+
+  lines.push(`[과거 맥락 기억 중 지금 상황과 유사한 기록 (벡터 유사도 검색 결과)]\n` + (memories.length
+    ? memories.map(m => `- (${m.log_date}, 유사도 ${m.similarity.toFixed(2)}) ${m.content}`).join('\n')
+    : '- 유사한 과거 기록 없음'));
+
+  const systemPrompt = `당신은 뛰어난 퍼스널 트레이너, 스케줄링 비서, 영양 관리사, 보디빌딩 코치, 학습 컨설턴트를 겸하는 'AI 인생 코치'입니다.
+사용자의 특정 기간 목표를 최우선 대전제로 삼아, 아래 제공된 [오늘 일정] + [최근 수치 통계] + [벡터로 검색된 과거 유사 맥락]을 입체적으로 종합해서 운동/식단/영양제/학업/시간 배분에 대해 구체적이고 실행 가능한 조언을 한국어로 제공하세요.
+가능하면 과거 데이터와 오늘 상황을 명시적으로 대조해서 "지난번 이런 패턴일 때 이런 결과가 있었다"는 식의 개인화된 통찰을 포함하세요. 답변은 간결하되 실행 가능한 항목 위주로 정리하세요.
+
+=== 컨텍스트 ===
+${lines.join('\n\n')}`;
+
+  return systemPrompt;
+}
+
+/* ============================================================
+   8. 채팅 UI
+   ============================================================ */
+async function loadChatHistory() {
+  if (!state.supabase) return;
+  const { data, error } = await state.supabase.from('chat_history').select('*').order('created_at', { ascending: true }).limit(50);
+  if (error) return;
+  const log = document.getElementById('chatLog');
+  log.innerHTML = '';
+  data.forEach(m => appendChatBubble(m.role, m.content, false));
+  log.scrollTop = log.scrollHeight;
+  maybeAutoBriefing(data);
+}
+
+// "대화 시작 시 선제적으로 오늘 일정을 분석" 요구사항: 사용자가 채팅 탭을 열었을 때
+// 오늘자 코치 브리핑이 아직 없다면, 사용자의 입력 없이도 AI가 먼저 오늘 일정/목표를
+// 분석해 하루 가이드를 제시한다.
+function maybeAutoBriefing(history) {
+  if (state.briefedToday || chatBusy) return;
+  const today = todayStr();
+  const alreadyBriefedToday = (history || []).some(m => m.role === 'assistant' && (m.created_at || '').slice(0, 10) === today);
+  if (alreadyBriefedToday) { state.briefedToday = true; return; }
+  if (!state.settings.openaiKey) return; // 키 미설정 상태에서 자동 호출/과금 방지
+  if (state.settings.provider === 'openai' && !state.settings.openaiKey) return;
+  if (state.settings.provider === 'anthropic' && !state.settings.anthropicKey) return;
+  state.briefedToday = true;
+  runBriefing(true);
+}
+
+async function runBriefing(auto = false) {
+  if (chatBusy) return;
+  let sb;
+  try { sb = requireSupabase(); } catch { return; }
+  if (!state.settings.openaiKey) return auto ? undefined : toast('설정에서 OpenAI API Key(임베딩용)를 입력하세요.');
+  if (state.settings.provider === 'anthropic' && !state.settings.anthropicKey) return auto ? undefined : toast('Anthropic API Key를 입력하세요.');
+  if (state.settings.provider === 'openai' && !state.settings.openaiKey) return auto ? undefined : toast('OpenAI API Key를 입력하세요.');
+
+  chatBusy = true;
+  const date = todayStr();
+  const loadingBubble = appendChatBubble('assistant', auto ? '오늘 일정을 먼저 분석하고 있어요...' : '브리핑 준비 중...');
+  try {
+    const { data: sch } = await sb.from('daily_schedules').select('event_title, raw_timeline_text').eq('log_date', date);
+    const seedParts = [];
+    (sch || []).forEach(s => {
+      if (s.event_title) seedParts.push(s.event_title);
+      if (s.raw_timeline_text) seedParts.push(s.raw_timeline_text);
+    });
+    const seedText = seedParts.join(' ') || (state.activeGoal ? state.activeGoal.title : '오늘의 컨디션과 일정');
+
+    const baseSystemPrompt = await buildCoachingContext(date, seedText);
+    const briefingSystemPrompt = baseSystemPrompt + `\n\n=== 지시사항 ===\n지금은 사용자가 아직 아무 말도 하지 않은 상태에서 앱이 자동으로 트리거한 "오늘의 사전 브리핑" 상황입니다. 사용자의 질문을 기다리지 말고, 위 컨텍스트(오늘 일정, 최근 SQL 통계, 유사 과거 벡터 기록)를 바탕으로 오늘 하루를 시간대별로 어떻게 보내야 할지 — 가용 시간, 운동, 식단, 학업 배분 순으로 — 먼저 구체적으로 제시하세요.`;
+
+    const reply = await callChatLLM(briefingSystemPrompt, [{ role: 'user', content: '(자동 트리거) 오늘의 브리핑을 요청합니다.' }]);
+    loadingBubble.textContent = reply;
+    await sb.from('chat_history').insert({ role: 'assistant', content: reply });
+    document.getElementById('chatLog').scrollTop = document.getElementById('chatLog').scrollHeight;
+  } catch (e) {
+    console.error(e);
+    loadingBubble.textContent = '⚠️ 브리핑 생성 실패: ' + e.message;
+  } finally {
+    chatBusy = false;
+  }
+}
+document.getElementById('btnBriefing').addEventListener('click', () => runBriefing(false));
+
+function appendChatBubble(role, content, scroll = true) {
+  const log = document.getElementById('chatLog');
+  const wrap = document.createElement('div');
+  wrap.className = 'flex ' + (role === 'user' ? 'justify-end' : 'justify-start');
+  const bubble = document.createElement('div');
+  bubble.className = 'msg-bubble max-w-[85%] rounded-2xl px-3 py-2 text-sm ' +
+    (role === 'user' ? 'bg-accent text-white' : 'bg-panel border border-white/5');
+  bubble.textContent = content;
+  wrap.appendChild(bubble);
+  log.appendChild(wrap);
+  if (scroll) log.scrollTop = log.scrollHeight;
+  return bubble;
+}
+
+document.getElementById('formChat').addEventListener('submit', (e) => { e.preventDefault(); sendChat(); });
+document.getElementById('btnSend').addEventListener('click', (e) => { e.preventDefault(); sendChat(); });
+document.getElementById('chatInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+});
+
+let chatBusy = false;
+async function sendChat() {
+  if (chatBusy) return;
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+  let sb;
+  try { sb = requireSupabase(); } catch { return; }
+  if (!state.settings.openaiKey) return toast('설정에서 OpenAI API Key(임베딩용)를 입력하세요.');
+  if (state.settings.provider === 'openai' && !state.settings.openaiKey) return toast('OpenAI API Key를 입력하세요.');
+  if (state.settings.provider === 'anthropic' && !state.settings.anthropicKey) return toast('Anthropic API Key를 입력하세요.');
+
+  chatBusy = true;
+  input.value = '';
+  appendChatBubble('user', text);
+  await sb.from('chat_history').insert({ role: 'user', content: text });
+
+  const loadingBubble = appendChatBubble('assistant', '생각 중...');
+
+  const date = todayStr();
+  try {
+    await extractAndStore(text, date);
+    const systemPrompt = await buildCoachingContext(date, text);
+
+    const { data: recentChats } = await sb.from('chat_history')
+      .select('*').order('created_at', { ascending: false }).limit(8);
+    const history = (recentChats || []).reverse().map(m => ({ role: m.role, content: m.content }));
+
+    const reply = await callChatLLM(systemPrompt, history);
+    loadingBubble.textContent = reply;
+    await sb.from('chat_history').insert({ role: 'assistant', content: reply });
+    document.getElementById('chatLog').scrollTop = document.getElementById('chatLog').scrollHeight;
+    refreshCharts();
+  } catch (e) {
+    console.error(e);
+    loadingBubble.textContent = '⚠️ 오류: ' + e.message;
+  } finally {
+    chatBusy = false;
+  }
+}
+
+/* ============================================================
+   9. 유틸
+   ============================================================ */
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str ?? '';
+  return div.innerHTML;
+}
+
+/* ============================================================
+   10. 초기화
+   ============================================================ */
+initSupabase();
+if (!state.settings.sbUrl) {
+  setTimeout(() => { document.getElementById('btnSettings').click(); toast('먼저 설정에서 Supabase / API Key를 입력해주세요.'); }, 300);
+} else {
+  loadGoals();
+}
+</script>
+</body>
+</html>
