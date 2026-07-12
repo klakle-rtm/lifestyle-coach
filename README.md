@@ -16,11 +16,12 @@
 2. 프로젝트 대시보드 → **SQL Editor** → `supabase/schema.sql` 내용 전체 붙여넣기 → 실행
 3. 프로젝트 대시보드 → **Settings → API**에서 `Project URL`과 `anon public` key 확인
 
-### 2. LLM API Key 준비
-- 채팅/코칭 응답용: OpenAI 또는 Anthropic(Claude) API Key 중 하나
-- 벡터 검색(임베딩)용: **OpenAI API Key는 항상 필요**합니다 (pgvector 컬럼이 OpenAI
-  `text-embedding-3-small`, 1536차원 기준으로 만들어져 있습니다). Anthropic은 임베딩 API가
-  없기 때문에, 채팅 제공자를 Anthropic으로 선택해도 임베딩용 OpenAI Key는 별도로 입력해야 합니다.
+### 2. Gemini API Key 준비
+- [Google AI Studio](https://aistudio.google.com/apikey)에서 Gemini API Key 발급
+- 이 앱은 채팅 응답과 임베딩(벡터 검색) 모두 **Gemini API 하나로 통일**되어 있습니다.
+  - 채팅: `generateContent` (모델명은 설정 화면에서 직접 입력, 예: `gemini-2.5-flash`)
+  - 임베딩: `text-embedding-004` (768차원 — `schema.sql`의 `vector(768)` 컬럼과 반드시 일치해야 합니다)
+- 프로덕션처럼 여러 사람이 접근할 수 있는 환경이라면 Google Cloud 콘솔에서 API 키에 HTTP 리퍼러 제한을 걸어두는 것을 권장합니다.
 
 ### 3. 앱 배포 (GitHub Pages)
 1. 이 저장소를 GitHub Pages로 배포 (Settings → Pages → 브랜치 선택 → 루트 `/`)
@@ -30,12 +31,12 @@
 ### 4. 앱 내 설정
 1. 우측 상단 ⚙️ 버튼 클릭
 2. Supabase URL / anon key 입력
-3. 채팅 LLM 제공자 선택(OpenAI/Anthropic) + 모델명 입력 (예: `gpt-4o-mini`, `claude-sonnet-4-5`)
-4. OpenAI API Key(임베딩 필수), 필요 시 Anthropic API Key 입력
+3. 채팅 모델명 입력 (예: `gemini-2.5-flash`)
+4. Gemini API Key 입력
 5. "연결 테스트" → 성공 확인 후 "저장"
 
 모든 키는 **브라우저 localStorage**에만 저장되며, 이 앱 자체는 외부 서버 없이 브라우저에서
-Supabase/OpenAI/Anthropic으로 직접 API를 호출하는 구조입니다. anon key와 API key는 사실상
+Supabase/Gemini로 직접 API를 호출하는 구조입니다. anon key와 API key는 사실상
 내 DB 전체 권한 및 결제 권한을 가지므로 타인과 공유하거나 공개 저장소 커밋 메시지 등에 남기지 마세요.
 
 ## 핵심 동작
@@ -60,3 +61,7 @@ Supabase/OpenAI/Anthropic으로 직접 API를 호출하는 구조입니다. anon
   저장"하는 폴백이 동작합니다. 이 경우 "기록" 탭의 수동 입력창을 사용하면 100% 정확하게 저장됩니다.
 - API 키가 브라우저에 그대로 노출되는 구조이므로, 개인 전용 사용을 전제로 합니다. 여러 사람과
   같이 쓰는 용도로는 적합하지 않습니다.
+- (이전에 OpenAI 임베딩 기준 `vector(1536)`으로 스키마를 이미 실행한 적이 있다면) 지금 버전은
+  Gemini `text-embedding-004` 기준 `vector(768)`로 바뀌었으므로, Supabase SQL Editor에서
+  `context_memories` 테이블을 `drop table context_memories;` 로 지우고 `schema.sql`을 다시
+  실행해야 합니다 (기존 벡터 데이터는 차원이 달라 재사용할 수 없습니다).

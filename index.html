@@ -234,24 +234,13 @@
     </div>
 
     <div class="space-y-1">
-      <label class="text-xs text-slate-400">채팅 LLM 제공자</label>
-      <select id="setProvider" class="w-full bg-panel2 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 ring-accent">
-        <option value="openai">OpenAI</option>
-        <option value="anthropic">Anthropic (Claude)</option>
-      </select>
-    </div>
-    <div class="space-y-1">
       <label class="text-xs text-slate-400">채팅 모델명</label>
-      <input id="setChatModel" placeholder="예: gpt-4o-mini 또는 claude-sonnet-4-5" class="w-full bg-panel2 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 ring-accent">
+      <input id="setChatModel" placeholder="예: gemini-2.5-flash 또는 gemini-2.5-pro" class="w-full bg-panel2 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 ring-accent">
     </div>
 
     <div class="space-y-1">
-      <label class="text-xs text-slate-400">OpenAI API Key <span class="text-slate-500">(임베딩 검색에 항상 필요 · 채팅 제공자가 OpenAI면 채팅에도 사용)</span></label>
-      <input id="setOpenAiKey" type="password" placeholder="sk-..." class="w-full bg-panel2 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 ring-accent">
-    </div>
-    <div class="space-y-1">
-      <label class="text-xs text-slate-400">Anthropic API Key <span class="text-slate-500">(채팅 제공자가 Anthropic일 때 필요)</span></label>
-      <input id="setAnthropicKey" type="password" placeholder="sk-ant-..." class="w-full bg-panel2 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 ring-accent">
+      <label class="text-xs text-slate-400">Gemini API Key <span class="text-slate-500">(채팅 + 임베딩 검색에 항상 필요, Google AI Studio에서 발급)</span></label>
+      <input id="setGeminiKey" type="password" placeholder="AIza..." class="w-full bg-panel2 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 ring-accent">
     </div>
 
     <div class="flex gap-2 pt-2">
@@ -273,18 +262,15 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
    ============================================================ */
 const LS_KEYS = {
   sbUrl: 'lc_sb_url', sbKey: 'lc_sb_key',
-  provider: 'lc_provider', chatModel: 'lc_chat_model',
-  openaiKey: 'lc_openai_key', anthropicKey: 'lc_anthropic_key',
+  chatModel: 'lc_chat_model', geminiKey: 'lc_gemini_key',
 };
 
 const state = {
   settings: {
     sbUrl: localStorage.getItem(LS_KEYS.sbUrl) || '',
     sbKey: localStorage.getItem(LS_KEYS.sbKey) || '',
-    provider: localStorage.getItem(LS_KEYS.provider) || 'openai',
     chatModel: localStorage.getItem(LS_KEYS.chatModel) || '',
-    openaiKey: localStorage.getItem(LS_KEYS.openaiKey) || '',
-    anthropicKey: localStorage.getItem(LS_KEYS.anthropicKey) || '',
+    geminiKey: localStorage.getItem(LS_KEYS.geminiKey) || '',
   },
   supabase: null,
   activeGoal: null,
@@ -380,10 +366,8 @@ const settingsModal = document.getElementById('settingsModal');
 document.getElementById('btnSettings').addEventListener('click', () => {
   document.getElementById('setSbUrl').value = state.settings.sbUrl;
   document.getElementById('setSbKey').value = state.settings.sbKey;
-  document.getElementById('setProvider').value = state.settings.provider;
   document.getElementById('setChatModel').value = state.settings.chatModel;
-  document.getElementById('setOpenAiKey').value = state.settings.openaiKey;
-  document.getElementById('setAnthropicKey').value = state.settings.anthropicKey;
+  document.getElementById('setGeminiKey').value = state.settings.geminiKey;
   settingsModal.classList.remove('hidden');
 });
 document.getElementById('btnCloseSettings').addEventListener('click', () => settingsModal.classList.add('hidden'));
@@ -391,17 +375,13 @@ document.getElementById('btnCloseSettings').addEventListener('click', () => sett
 document.getElementById('btnSaveSettings').addEventListener('click', () => {
   state.settings.sbUrl = document.getElementById('setSbUrl').value.trim();
   state.settings.sbKey = document.getElementById('setSbKey').value.trim();
-  state.settings.provider = document.getElementById('setProvider').value;
   state.settings.chatModel = document.getElementById('setChatModel').value.trim();
-  state.settings.openaiKey = document.getElementById('setOpenAiKey').value.trim();
-  state.settings.anthropicKey = document.getElementById('setAnthropicKey').value.trim();
+  state.settings.geminiKey = document.getElementById('setGeminiKey').value.trim();
 
   localStorage.setItem(LS_KEYS.sbUrl, state.settings.sbUrl);
   localStorage.setItem(LS_KEYS.sbKey, state.settings.sbKey);
-  localStorage.setItem(LS_KEYS.provider, state.settings.provider);
   localStorage.setItem(LS_KEYS.chatModel, state.settings.chatModel);
-  localStorage.setItem(LS_KEYS.openaiKey, state.settings.openaiKey);
-  localStorage.setItem(LS_KEYS.anthropicKey, state.settings.anthropicKey);
+  localStorage.setItem(LS_KEYS.geminiKey, state.settings.geminiKey);
 
   initSupabase();
   document.getElementById('settingsStatus').textContent = '저장되었습니다.';
@@ -693,57 +673,51 @@ function daysAgoStr(n) {
 }
 
 /* ============================================================
-   6. LLM 연동 : 임베딩 / 채팅 (OpenAI, Anthropic)
+   6. LLM 연동 : 임베딩 / 채팅 (Google Gemini)
    ============================================================ */
-async function getEmbedding(text) {
-  if (!state.settings.openaiKey) throw new Error('임베딩 검색을 위해 OpenAI API Key가 필요합니다.');
-  const res = await fetch('https://api.openai.com/v1/embeddings', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.settings.openaiKey}` },
-    body: JSON.stringify({ model: 'text-embedding-3-small', input: text }),
-  });
-  if (!res.ok) throw new Error('임베딩 API 오류: ' + (await res.text()));
+const GEMINI_EMBED_MODEL = 'text-embedding-004'; // 768차원, schema.sql의 vector(768)과 일치해야 함
+
+async function getEmbedding(text, taskType = 'RETRIEVAL_DOCUMENT') {
+  if (!state.settings.geminiKey) throw new Error('임베딩 검색을 위해 Gemini API Key가 필요합니다.');
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_EMBED_MODEL}:embedContent?key=${encodeURIComponent(state.settings.geminiKey)}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: { parts: [{ text }] }, taskType }),
+    }
+  );
+  if (!res.ok) throw new Error('Gemini 임베딩 API 오류: ' + (await res.text()));
   const json = await res.json();
-  return json.data[0].embedding;
+  return json.embedding.values;
 }
 
 async function callChatLLM(systemPrompt, messages, { json = false } = {}) {
   if (!state.settings.chatModel) throw new Error('설정에서 채팅 모델명을 입력하세요.');
-  if (state.settings.provider === 'openai') {
-    if (!state.settings.openaiKey) throw new Error('OpenAI API Key가 필요합니다.');
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+  if (!state.settings.geminiKey) throw new Error('Gemini API Key가 필요합니다.');
+
+  const contents = messages.map(m => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: m.content }],
+  }));
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${state.settings.chatModel}:generateContent?key=${encodeURIComponent(state.settings.geminiKey)}`,
+    {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.settings.openaiKey}` },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: state.settings.chatModel,
-        messages: [{ role: 'system', content: systemPrompt }, ...messages],
-        ...(json ? { response_format: { type: 'json_object' } } : {}),
+        contents,
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        ...(json ? { generationConfig: { responseMimeType: 'application/json' } } : {}),
       }),
-    });
-    if (!res.ok) throw new Error('OpenAI 채팅 API 오류: ' + (await res.text()));
-    const j = await res.json();
-    return j.choices[0].message.content;
-  } else {
-    if (!state.settings.anthropicKey) throw new Error('Anthropic API Key가 필요합니다.');
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': state.settings.anthropicKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
-      body: JSON.stringify({
-        model: state.settings.chatModel,
-        max_tokens: 1500,
-        system: systemPrompt,
-        messages: messages.map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content })),
-      }),
-    });
-    if (!res.ok) throw new Error('Anthropic 채팅 API 오류: ' + (await res.text()));
-    const j = await res.json();
-    return j.content.map(c => c.text || '').join('');
-  }
+    }
+  );
+  if (!res.ok) throw new Error('Gemini 채팅 API 오류: ' + (await res.text()));
+  const j = await res.json();
+  const candidate = j.candidates && j.candidates[0];
+  if (!candidate) throw new Error('Gemini 응답에 후보가 없습니다 (안전 필터 등으로 차단되었을 수 있음).');
+  return (candidate.content.parts || []).map(p => p.text || '').join('');
 }
 
 /* ============================================================
@@ -770,7 +744,7 @@ async function extractAndStore(userText, date) {
 
   let parsed;
   try {
-    const raw = await callChatLLM(schema, [{ role: 'user', content: userText }], { json: state.settings.provider === 'openai' });
+    const raw = await callChatLLM(schema, [{ role: 'user', content: userText }], { json: true });
     const cleaned = raw.trim().replace(/^```json/i, '').replace(/^```/, '').replace(/```$/, '').trim();
     parsed = JSON.parse(cleaned);
   } catch (e) {
@@ -842,7 +816,7 @@ async function buildCoachingContext(date, queryTextForVectorSearch) {
 
   let memories = [];
   try {
-    const qEmbedding = await getEmbedding(queryTextForVectorSearch);
+    const qEmbedding = await getEmbedding(queryTextForVectorSearch, 'RETRIEVAL_QUERY');
     const { data, error } = await sb.rpc('match_context_memories', {
       query_embedding: qEmbedding, match_count: 5, filter_date_from: null,
     });
@@ -928,9 +902,7 @@ function maybeAutoBriefing(history) {
   const today = todayStr();
   const alreadyBriefedToday = (history || []).some(m => m.role === 'assistant' && (m.created_at || '').slice(0, 10) === today);
   if (alreadyBriefedToday) { state.briefedToday = true; return; }
-  if (!state.settings.openaiKey) return; // 키 미설정 상태에서 자동 호출/과금 방지
-  if (state.settings.provider === 'openai' && !state.settings.openaiKey) return;
-  if (state.settings.provider === 'anthropic' && !state.settings.anthropicKey) return;
+  if (!state.settings.geminiKey || !state.settings.chatModel) return; // 키/모델 미설정 상태에서 자동 호출/과금 방지
   state.briefedToday = true;
   runBriefing(true);
 }
@@ -939,9 +911,8 @@ async function runBriefing(auto = false) {
   if (chatBusy) return;
   let sb;
   try { sb = requireSupabase(); } catch { return; }
-  if (!state.settings.openaiKey) return auto ? undefined : toast('설정에서 OpenAI API Key(임베딩용)를 입력하세요.');
-  if (state.settings.provider === 'anthropic' && !state.settings.anthropicKey) return auto ? undefined : toast('Anthropic API Key를 입력하세요.');
-  if (state.settings.provider === 'openai' && !state.settings.openaiKey) return auto ? undefined : toast('OpenAI API Key를 입력하세요.');
+  if (!state.settings.geminiKey) return auto ? undefined : toast('설정에서 Gemini API Key를 입력하세요.');
+  if (!state.settings.chatModel) return auto ? undefined : toast('설정에서 채팅 모델명을 입력하세요.');
 
   chatBusy = true;
   const date = todayStr();
@@ -999,9 +970,8 @@ async function sendChat() {
   if (!text) return;
   let sb;
   try { sb = requireSupabase(); } catch { return; }
-  if (!state.settings.openaiKey) return toast('설정에서 OpenAI API Key(임베딩용)를 입력하세요.');
-  if (state.settings.provider === 'openai' && !state.settings.openaiKey) return toast('OpenAI API Key를 입력하세요.');
-  if (state.settings.provider === 'anthropic' && !state.settings.anthropicKey) return toast('Anthropic API Key를 입력하세요.');
+  if (!state.settings.geminiKey) return toast('설정에서 Gemini API Key를 입력하세요.');
+  if (!state.settings.chatModel) return toast('설정에서 채팅 모델명을 입력하세요.');
 
   chatBusy = true;
   input.value = '';
