@@ -62,54 +62,88 @@
 <!-- ===================== 메인 컨텐츠 ===================== -->
 <main class="flex-1 max-w-lg w-full mx-auto px-4 pb-28 pt-4 overflow-x-hidden">
 
+  <!-- ---------- TAB: 캘린더 (홈) ---------- -->
+  <section id="tab-calendar" class="tab-panel space-y-4">
+    <!-- 월 네비게이션 -->
+    <div class="flex items-center justify-between">
+      <button id="btnPrevMonth" class="p-2 rounded-lg bg-panel2 hover:bg-white/10">◀</button>
+      <div class="flex items-center gap-2">
+        <h2 id="monthLabel" class="font-bold text-base"></h2>
+        <button id="btnToday" class="text-[11px] bg-panel2 hover:bg-white/10 rounded-lg px-2 py-1">오늘</button>
+      </div>
+      <button id="btnNextMonth" class="p-2 rounded-lg bg-panel2 hover:bg-white/10">▶</button>
+    </div>
+
+    <!-- 달력 그리드 -->
+    <div class="bg-panel rounded-2xl p-3">
+      <div class="grid grid-cols-7 text-center text-[11px] text-slate-500 mb-1">
+        <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+      </div>
+      <div id="calendarGrid" class="grid grid-cols-7 gap-1"></div>
+    </div>
+
+    <!-- 선택한 날짜 상세 -->
+    <div class="bg-panel rounded-2xl p-4 space-y-3">
+      <h3 id="selectedDateLabel" class="font-semibold text-sm text-accent"></h3>
+
+      <form id="formSchedule" class="space-y-2">
+        <input id="schTitle" placeholder="일정 제목 (예: 팀 미팅)" class="w-full bg-panel2 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 ring-accent">
+        <div class="grid grid-cols-2 gap-2">
+          <input id="schStart" type="time" class="w-full bg-panel2 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 ring-accent">
+          <input id="schEnd" type="time" class="w-full bg-panel2 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 ring-accent">
+        </div>
+        <button class="w-full bg-panel2 hover:bg-white/10 transition rounded-xl py-2 font-semibold text-sm">+ 이 날짜에 일정 추가</button>
+      </form>
+      <div id="scheduleList" class="space-y-2"></div>
+
+      <div class="pt-1 space-y-2 border-t border-white/5">
+        <p class="text-xs text-slate-400 pt-2">이 날의 간단한 타임라인/할 일을 대충 적어두면, AI 코치가 확정 일정과 함께 가용 시간·체력 소모를 계산할 때 참고합니다.</p>
+        <textarea id="timelineText" rows="3" placeholder="예: 9시 출근, 12시 점심약속, 15-17시 회의 연달아, 저녁엔 특별한 일정 없음..." class="w-full bg-panel2 rounded-xl px-3 py-2 outline-none focus:ring-2 ring-accent text-sm"></textarea>
+        <button id="btnSaveTimeline" class="w-full bg-accent hover:opacity-90 transition rounded-xl py-2 font-semibold text-sm">이 날짜 타임라인 저장 (벡터 기록 포함)</button>
+      </div>
+    </div>
+
+    <!-- 할 일 (마감 기한 기반, 날짜에 종속되지 않음) -->
+    <div class="bg-panel rounded-2xl p-4 space-y-3">
+      <h3 class="font-semibold text-sm">📌 할 일 (마감 기한)</h3>
+      <p class="text-xs text-slate-400">"언제까지 해야 한다"만 입력하면, AI가 위 확정 일정 사이의 빈 시간을 보고 언제 하면 좋을지 추천해줍니다.</p>
+      <form id="formTask" class="space-y-2">
+        <input id="taskTitle" required placeholder="할 일 (예: OS 커널 과제 제출)" class="w-full bg-panel2 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 ring-accent">
+        <div class="grid grid-cols-2 gap-2">
+          <input id="taskDeadline" type="date" class="w-full bg-panel2 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 ring-accent">
+          <select id="taskCategory" class="w-full bg-panel2 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 ring-accent">
+            <option value="study">학업</option>
+            <option value="fitness">운동</option>
+            <option value="other">기타</option>
+          </select>
+        </div>
+        <button class="w-full bg-panel2 hover:bg-white/10 transition rounded-xl py-2 font-semibold text-sm">+ 할 일 추가</button>
+      </form>
+      <div id="taskList" class="space-y-2"></div>
+    </div>
+  </section>
+
   <!-- ---------- TAB: 목표 ---------- -->
   <section id="tab-goals" class="tab-panel space-y-4">
     <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wide">특정 기간 목표</h2>
-    <form id="formGoal" class="bg-panel rounded-2xl p-4 space-y-3">
-      <input id="goalTitle" required placeholder="예: 5월 중순까지 벌크업 후 컷팅" class="w-full bg-panel2 rounded-xl px-3 py-2 outline-none focus:ring-2 ring-accent">
+
+    <div id="goalGroupStudy"></div>
+    <div id="goalGroupFitness"></div>
+    <div id="goalGroupOther"></div>
+
+    <button id="btnToggleGoalForm" class="w-full bg-panel2 hover:bg-white/10 transition rounded-xl py-2 font-semibold text-sm">+ 다른 목표 추가</button>
+
+    <form id="formGoal" class="hidden bg-panel rounded-2xl p-4 space-y-3">
+      <input id="goalTitle" required placeholder="목표 제목 (예: 벌크업 후 컷팅)" class="w-full bg-panel2 rounded-xl px-3 py-2 outline-none focus:ring-2 ring-accent">
+      <input id="goalPeriod" placeholder="기간을 대충 말로 설명 (예: 5월 중순까지, 이번 달 말까지, 3개월간)" class="w-full bg-panel2 rounded-xl px-3 py-2 outline-none focus:ring-2 ring-accent">
       <textarea id="goalDesc" placeholder="세부 배경/조건 (예: 주 4회 웨이트, 하루 2200kcal 목표...)" rows="2" class="w-full bg-panel2 rounded-xl px-3 py-2 outline-none focus:ring-2 ring-accent"></textarea>
-      <div class="grid grid-cols-2 gap-2">
-        <div>
-          <label class="text-xs text-slate-400">시작일</label>
-          <input id="goalStart" type="date" class="w-full bg-panel2 rounded-xl px-3 py-2 outline-none focus:ring-2 ring-accent">
-        </div>
-        <div>
-          <label class="text-xs text-slate-400">종료일</label>
-          <input id="goalEnd" type="date" class="w-full bg-panel2 rounded-xl px-3 py-2 outline-none focus:ring-2 ring-accent">
-        </div>
-      </div>
       <select id="goalCategory" class="w-full bg-panel2 rounded-xl px-3 py-2 outline-none focus:ring-2 ring-accent">
-        <option value="fitness">운동/신체</option>
-        <option value="study">학업/공부</option>
-        <option value="lifestyle">생활/기타</option>
+        <option value="study">학업 목표</option>
+        <option value="fitness">운동 목표</option>
+        <option value="other">기타 목표</option>
       </select>
       <button class="w-full bg-accent hover:opacity-90 transition rounded-xl py-2 font-semibold">목표 저장</button>
     </form>
-    <div id="goalList" class="space-y-2"></div>
-  </section>
-
-  <!-- ---------- TAB: 캘린더/타임라인 ---------- -->
-  <section id="tab-calendar" class="tab-panel space-y-4">
-    <div class="flex items-center justify-between">
-      <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wide">일정 · 타임라인</h2>
-      <input id="calDate" type="date" class="bg-panel2 rounded-xl px-3 py-1.5 text-sm outline-none focus:ring-2 ring-accent">
-    </div>
-
-    <form id="formSchedule" class="bg-panel rounded-2xl p-4 space-y-3">
-      <input id="schTitle" placeholder="일정 제목 (예: 팀 미팅)" class="w-full bg-panel2 rounded-xl px-3 py-2 outline-none focus:ring-2 ring-accent">
-      <div class="grid grid-cols-2 gap-2">
-        <input id="schStart" type="time" class="w-full bg-panel2 rounded-xl px-3 py-2 outline-none focus:ring-2 ring-accent">
-        <input id="schEnd" type="time" class="w-full bg-panel2 rounded-xl px-3 py-2 outline-none focus:ring-2 ring-accent">
-      </div>
-      <button class="w-full bg-panel2 hover:bg-white/10 transition rounded-xl py-2 font-semibold text-sm">+ 일정 추가</button>
-    </form>
-    <div id="scheduleList" class="space-y-2"></div>
-
-    <div class="bg-panel rounded-2xl p-4 space-y-2">
-      <p class="text-xs text-slate-400">오늘 타임라인 / 할 일을 대충 적어두면 AI 코치가 가용 시간·체력 소모를 계산할 때 참고합니다. (구글/삼성 캘린더에서 복사해 붙여넣어도 됩니다)</p>
-      <textarea id="timelineText" rows="4" placeholder="예: 9시 출근, 12시 점심약속, 15-17시 회의 연달아, 저녁엔 특별한 일정 없음..." class="w-full bg-panel2 rounded-xl px-3 py-2 outline-none focus:ring-2 ring-accent text-sm"></textarea>
-      <button id="btnSaveTimeline" class="w-full bg-accent hover:opacity-90 transition rounded-xl py-2 font-semibold text-sm">타임라인 저장 (벡터 기록 포함)</button>
-    </div>
   </section>
 
   <!-- ---------- TAB: 기록 & 차트 ---------- -->
@@ -199,11 +233,11 @@
 <!-- ===================== 하단 네비게이션 ===================== -->
 <nav class="safe-bottom fixed bottom-0 left-0 right-0 z-30 bg-panel/95 backdrop-blur border-t border-white/5">
   <div class="max-w-lg mx-auto grid grid-cols-4 text-xs">
-    <button data-tab="goals" class="navbtn active flex flex-col items-center gap-1 py-2.5 text-slate-400">
-      <span class="text-lg">🎯</span>목표
+    <button data-tab="calendar" class="navbtn active flex flex-col items-center gap-1 py-2.5 text-slate-400">
+      <span class="text-lg">🗓️</span>캘린더
     </button>
-    <button data-tab="calendar" class="navbtn flex flex-col items-center gap-1 py-2.5 text-slate-400">
-      <span class="text-lg">🗓️</span>일정
+    <button data-tab="goals" class="navbtn flex flex-col items-center gap-1 py-2.5 text-slate-400">
+      <span class="text-lg">🎯</span>목표
     </button>
     <button data-tab="log" class="navbtn flex flex-col items-center gap-1 py-2.5 text-slate-400">
       <span class="text-lg">📊</span>기록
@@ -248,6 +282,14 @@
       <button id="btnSaveSettings" class="flex-1 bg-accent hover:opacity-90 rounded-xl py-2 text-sm font-semibold">저장</button>
     </div>
     <p id="settingsStatus" class="text-xs text-center text-slate-400 min-h-[1rem]"></p>
+
+    <div class="pt-2 border-t border-white/5 space-y-2">
+      <p class="text-[11px] text-slate-500">이 설정값은 이 브라우저에 자동으로 계속 저장됩니다. 다른 기기/브라우저를 쓰거나 저장이 초기화된 경우를 대비해 아래에서 백업/복원할 수 있습니다.</p>
+      <div class="flex gap-2">
+        <button id="btnExportSettings" class="flex-1 bg-panel2 hover:bg-white/10 rounded-xl py-2 text-xs font-semibold">설정 내보내기(복사)</button>
+        <button id="btnImportSettings" class="flex-1 bg-panel2 hover:bg-white/10 rounded-xl py-2 text-xs font-semibold">설정 가져오기(붙여넣기)</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -265,18 +307,33 @@ const LS_KEYS = {
   chatModel: 'lc_chat_model', geminiKey: 'lc_gemini_key',
 };
 
+// localStorage 접근을 try/catch로 감싸 프라이빗 모드 등에서도 앱이 죽지 않게 한다.
+// (설정이 "매번 다시 입력해야" 하는 문제는 대부분 localStorage 자체가 아니라,
+//  매번 파일을 새로 열거나 저장소가 초기화되는 접속 방식 때문에 발생한다.
+//  settingsModal의 "내보내기/가져오기"로 백업해두면 어떤 경우에도 즉시 복원 가능하다.)
+function lsGet(key) {
+  try { return localStorage.getItem(key) || ''; } catch (e) { console.warn('localStorage 읽기 실패', e); return ''; }
+}
+function lsSet(key, value) {
+  try { localStorage.setItem(key, value); } catch (e) { console.warn('localStorage 저장 실패', e); }
+}
+
 const state = {
   settings: {
-    sbUrl: localStorage.getItem(LS_KEYS.sbUrl) || '',
-    sbKey: localStorage.getItem(LS_KEYS.sbKey) || '',
-    chatModel: localStorage.getItem(LS_KEYS.chatModel) || '',
-    geminiKey: localStorage.getItem(LS_KEYS.geminiKey) || '',
+    sbUrl: lsGet(LS_KEYS.sbUrl),
+    sbKey: lsGet(LS_KEYS.sbKey),
+    chatModel: lsGet(LS_KEYS.chatModel),
+    geminiKey: lsGet(LS_KEYS.geminiKey),
   },
   supabase: null,
   activeGoal: null,
   charts: {},
   channel: null,
   briefedToday: false,
+  calYear: new Date().getFullYear(),
+  calMonth: new Date().getMonth(), // 0-11
+  selectedDate: todayStr(),
+  monthEventDates: new Set(), // 이번 달에 일정/타임라인이 있는 날짜(dot 표시용)
 };
 
 function todayStr() {
@@ -310,7 +367,7 @@ function setupRealtime() {
   }
   if (!state.supabase) return;
 
-  const tables = ['goals', 'daily_schedules', 'body_metrics', 'workout_logs', 'diet_logs', 'supplement_logs', 'study_logs', 'chat_history'];
+  const tables = ['goals', 'daily_schedules', 'tasks', 'body_metrics', 'workout_logs', 'diet_logs', 'supplement_logs', 'study_logs', 'chat_history'];
   const channel = state.supabase.channel('lc-realtime-sync');
   tables.forEach(table => {
     channel.on('postgres_changes', { event: '*', schema: 'public', table }, () => handleRealtimeChange(table));
@@ -321,7 +378,8 @@ function setupRealtime() {
 
 function handleRealtimeChange(table) {
   if (table === 'goals') loadGoals();
-  else if (table === 'daily_schedules') loadSchedule();
+  else if (table === 'daily_schedules') { loadSchedule(); loadMonthEventDates(); }
+  else if (table === 'tasks') loadTasks();
   else if (table === 'body_metrics' || table === 'workout_logs' || table === 'diet_logs') refreshCharts();
   else if (table === 'chat_history' && !chatBusy) loadChatHistory();
 }
@@ -353,11 +411,11 @@ function switchTab(name) {
   document.getElementById('tab-' + name).classList.add('active');
   document.querySelectorAll('.navbtn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
   if (name === 'goals') loadGoals();
-  if (name === 'calendar') loadSchedule();
+  if (name === 'calendar') { renderCalendar(); loadDayDetail(); loadTasks(); }
   if (name === 'log') refreshCharts();
   if (name === 'chat') loadChatHistory();
 }
-switchTab('goals');
+switchTab('calendar');
 
 /* ============================================================
    2. 설정 모달
@@ -378,16 +436,43 @@ document.getElementById('btnSaveSettings').addEventListener('click', () => {
   state.settings.chatModel = document.getElementById('setChatModel').value.trim();
   state.settings.geminiKey = document.getElementById('setGeminiKey').value.trim();
 
-  localStorage.setItem(LS_KEYS.sbUrl, state.settings.sbUrl);
-  localStorage.setItem(LS_KEYS.sbKey, state.settings.sbKey);
-  localStorage.setItem(LS_KEYS.chatModel, state.settings.chatModel);
-  localStorage.setItem(LS_KEYS.geminiKey, state.settings.geminiKey);
+  lsSet(LS_KEYS.sbUrl, state.settings.sbUrl);
+  lsSet(LS_KEYS.sbKey, state.settings.sbKey);
+  lsSet(LS_KEYS.chatModel, state.settings.chatModel);
+  lsSet(LS_KEYS.geminiKey, state.settings.geminiKey);
 
   initSupabase();
-  document.getElementById('settingsStatus').textContent = '저장되었습니다.';
+  document.getElementById('settingsStatus').textContent = '저장되었습니다. 이 브라우저에서는 다시 입력할 필요 없이 계속 유지됩니다.';
   toast('설정이 저장되었습니다.');
   settingsModal.classList.add('hidden');
   loadGoals();
+  renderCalendar();
+});
+
+document.getElementById('btnExportSettings').addEventListener('click', async () => {
+  const payload = JSON.stringify(state.settings);
+  const encoded = btoa(unescape(encodeURIComponent(payload)));
+  try {
+    await navigator.clipboard.writeText(encoded);
+    toast('설정 백업 코드가 클립보드에 복사되었습니다. 안전한 곳에 보관하세요.');
+  } catch (e) {
+    document.getElementById('settingsStatus').textContent = '클립보드 복사 실패. 아래 코드를 직접 복사하세요: ' + encoded;
+  }
+});
+
+document.getElementById('btnImportSettings').addEventListener('click', () => {
+  const encoded = prompt('내보내기로 저장해둔 설정 백업 코드를 붙여넣으세요.');
+  if (!encoded) return;
+  try {
+    const payload = JSON.parse(decodeURIComponent(escape(atob(encoded.trim()))));
+    document.getElementById('setSbUrl').value = payload.sbUrl || '';
+    document.getElementById('setSbKey').value = payload.sbKey || '';
+    document.getElementById('setChatModel').value = payload.chatModel || '';
+    document.getElementById('setGeminiKey').value = payload.geminiKey || '';
+    document.getElementById('settingsStatus').textContent = '불러왔습니다. "저장"을 눌러 적용하세요.';
+  } catch (e) {
+    document.getElementById('settingsStatus').textContent = '백업 코드를 읽을 수 없습니다.';
+  }
 });
 
 document.getElementById('btnTestConn').addEventListener('click', async () => {
@@ -407,24 +492,35 @@ document.getElementById('btnTestConn').addEventListener('click', async () => {
 });
 
 /* ============================================================
-   3. 목표(Goals)
+   3. 목표(Goals) — 학업/운동을 기본 그룹으로 두고, "다른 목표 추가"로 무제한 확장
    ============================================================ */
-document.getElementById('formGoal').addEventListener('submit', async (e) => {
+const goalForm = document.getElementById('formGoal');
+document.getElementById('btnToggleGoalForm').addEventListener('click', () => {
+  goalForm.classList.toggle('hidden');
+});
+
+goalForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   const sb = requireSupabase();
   const payload = {
     title: document.getElementById('goalTitle').value.trim(),
+    period_text: document.getElementById('goalPeriod').value.trim() || null,
     description: document.getElementById('goalDesc').value.trim() || null,
     category: document.getElementById('goalCategory').value,
-    start_date: document.getElementById('goalStart').value || todayStr(),
-    end_date: document.getElementById('goalEnd').value || null,
   };
   const { error } = await sb.from('goals').insert(payload);
   if (error) return toast('저장 실패: ' + error.message);
   e.target.reset();
+  goalForm.classList.add('hidden');
   toast('목표가 저장되었습니다.');
   loadGoals();
 });
+
+const GOAL_GROUP_META = {
+  study: { label: '🎓 학업 목표', elId: 'goalGroupStudy' },
+  fitness: { label: '💪 운동 목표', elId: 'goalGroupFitness' },
+  other: { label: '📌 기타 목표', elId: 'goalGroupOther' },
+};
 
 async function loadGoals() {
   if (!state.supabase) return;
@@ -434,45 +530,143 @@ async function loadGoals() {
 
   state.activeGoal = data.find(g => g.status === 'active') || null;
 
-  const list = document.getElementById('goalList');
-  list.innerHTML = '';
-  data.forEach(g => {
-    const div = document.createElement('div');
-    div.className = 'bg-panel rounded-2xl p-4 flex items-start justify-between gap-2';
-    div.innerHTML = `
-      <div>
-        <p class="font-semibold text-sm">${escapeHtml(g.title)} ${g.status !== 'active' ? `<span class="text-xs text-slate-500">(${g.status})</span>` : ''}</p>
-        ${g.description ? `<p class="text-xs text-slate-400 mt-1">${escapeHtml(g.description)}</p>` : ''}
-        <p class="text-[11px] text-slate-500 mt-1">${g.start_date} ~ ${g.end_date || '미정'}</p>
-      </div>
-      <div class="flex flex-col gap-1">
-        ${g.status === 'active' ? `<button data-id="${g.id}" class="btnCompleteGoal text-[11px] bg-panel2 rounded-lg px-2 py-1">완료</button>` : ''}
-        <button data-id="${g.id}" class="btnDeleteGoal text-[11px] bg-panel2 rounded-lg px-2 py-1 text-red-400">삭제</button>
-      </div>`;
-    list.appendChild(div);
+  ['study', 'fitness', 'other'].forEach(cat => {
+    const meta = GOAL_GROUP_META[cat];
+    const goalsInCat = data.filter(g => (g.category || 'other') === cat);
+    const container = document.getElementById(meta.elId);
+    container.innerHTML = `<h3 class="text-sm font-semibold mb-2">${meta.label}</h3>`;
+    if (!goalsInCat.length) {
+      container.innerHTML += `<div class="bg-panel rounded-2xl p-4 text-xs text-slate-500">아직 설정된 ${meta.label.replace(/^\S+\s/, '')}가 없습니다.</div>`;
+      return;
+    }
+    const listWrap = document.createElement('div');
+    listWrap.className = 'space-y-2';
+    goalsInCat.forEach(g => {
+      const div = document.createElement('div');
+      div.className = 'bg-panel rounded-2xl p-4 flex items-start justify-between gap-2';
+      div.innerHTML = `
+        <div>
+          <p class="font-semibold text-sm">${escapeHtml(g.title)} ${g.status !== 'active' ? `<span class="text-xs text-slate-500">(${g.status})</span>` : ''}</p>
+          ${g.description ? `<p class="text-xs text-slate-400 mt-1">${escapeHtml(g.description)}</p>` : ''}
+          <p class="text-[11px] text-slate-500 mt-1">기간: ${escapeHtml(g.period_text || g.end_date || '미정')}</p>
+        </div>
+        <div class="flex flex-col gap-1">
+          ${g.status === 'active' ? `<button data-id="${g.id}" class="btnCompleteGoal text-[11px] bg-panel2 rounded-lg px-2 py-1">완료</button>` : ''}
+          <button data-id="${g.id}" class="btnDeleteGoal text-[11px] bg-panel2 rounded-lg px-2 py-1 text-red-400">삭제</button>
+        </div>`;
+      listWrap.appendChild(div);
+    });
+    container.appendChild(listWrap);
   });
-  list.querySelectorAll('.btnCompleteGoal').forEach(b => b.addEventListener('click', async () => {
+
+  document.querySelectorAll('.btnCompleteGoal').forEach(b => b.addEventListener('click', async () => {
     await state.supabase.from('goals').update({ status: 'completed' }).eq('id', b.dataset.id);
     loadGoals();
   }));
-  list.querySelectorAll('.btnDeleteGoal').forEach(b => b.addEventListener('click', async () => {
+  document.querySelectorAll('.btnDeleteGoal').forEach(b => b.addEventListener('click', async () => {
     await state.supabase.from('goals').delete().eq('id', b.dataset.id);
     loadGoals();
   }));
 }
 
 /* ============================================================
-   4. 캘린더 / 타임라인
+   4. 캘린더 (월 그리드 + 날짜별 상세) / 할 일(마감 기한)
    ============================================================ */
-const calDateEl = document.getElementById('calDate');
-calDateEl.value = todayStr();
-calDateEl.addEventListener('change', loadSchedule);
+function renderCalendar() {
+  const y = state.calYear, m = state.calMonth;
+  document.getElementById('monthLabel').textContent = `${y}년 ${m + 1}월`;
+
+  const firstDay = new Date(y, m, 1);
+  const startWeekday = firstDay.getDay(); // 0=일
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  const today = todayStr();
+
+  const grid = document.getElementById('calendarGrid');
+  grid.innerHTML = '';
+  for (let i = 0; i < startWeekday; i++) grid.appendChild(document.createElement('div'));
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const btn = document.createElement('button');
+    const isToday = dateStr === today;
+    const isSelected = dateStr === state.selectedDate;
+    const hasEvent = state.monthEventDates.has(dateStr);
+    btn.className = 'relative aspect-square rounded-lg text-xs flex items-center justify-center transition ' +
+      (isSelected ? 'bg-accent text-white font-bold' : isToday ? 'bg-panel2 ring-1 ring-accent text-accent font-bold' : 'hover:bg-panel2 text-slate-300');
+    btn.textContent = d;
+    if (hasEvent && !isSelected) {
+      const dot = document.createElement('span');
+      dot.className = 'absolute bottom-0.5 w-1 h-1 rounded-full bg-accent2';
+      btn.appendChild(dot);
+    }
+    btn.addEventListener('click', () => selectDate(dateStr));
+    grid.appendChild(btn);
+  }
+
+  loadMonthEventDates();
+}
+
+async function loadMonthEventDates() {
+  if (!state.supabase) return;
+  const y = state.calYear, m = state.calMonth;
+  const from = `${y}-${String(m + 1).padStart(2, '0')}-01`;
+  const to = `${y}-${String(m + 1).padStart(2, '0')}-${String(new Date(y, m + 1, 0).getDate()).padStart(2, '0')}`;
+  const { data } = await state.supabase.from('daily_schedules').select('log_date').gte('log_date', from).lte('log_date', to);
+  state.monthEventDates = new Set((data || []).map(r => r.log_date));
+  renderCalendarDotsOnly();
+}
+
+function renderCalendarDotsOnly() {
+  const grid = document.getElementById('calendarGrid');
+  const y = state.calYear, m = state.calMonth;
+  Array.from(grid.children).forEach(btn => {
+    if (!btn.textContent) return;
+    const d = parseInt(btn.textContent, 10);
+    if (isNaN(d)) return;
+    const dateStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const existingDot = btn.querySelector('span');
+    if (existingDot) existingDot.remove();
+    if (state.monthEventDates.has(dateStr) && dateStr !== state.selectedDate) {
+      const dot = document.createElement('span');
+      dot.className = 'absolute bottom-0.5 w-1 h-1 rounded-full bg-accent2';
+      btn.appendChild(dot);
+    }
+  });
+}
+
+document.getElementById('btnPrevMonth').addEventListener('click', () => {
+  state.calMonth -= 1;
+  if (state.calMonth < 0) { state.calMonth = 11; state.calYear -= 1; }
+  renderCalendar();
+});
+document.getElementById('btnNextMonth').addEventListener('click', () => {
+  state.calMonth += 1;
+  if (state.calMonth > 11) { state.calMonth = 0; state.calYear += 1; }
+  renderCalendar();
+});
+document.getElementById('btnToday').addEventListener('click', () => {
+  const now = new Date();
+  state.calYear = now.getFullYear();
+  state.calMonth = now.getMonth();
+  selectDate(todayStr());
+});
+
+function selectDate(dateStr) {
+  state.selectedDate = dateStr;
+  renderCalendar();
+  loadDayDetail();
+}
+
+function loadDayDetail() {
+  document.getElementById('selectedDateLabel').textContent = `📅 ${state.selectedDate}`;
+  loadSchedule();
+}
 
 document.getElementById('formSchedule').addEventListener('submit', async (e) => {
   e.preventDefault();
   const sb = requireSupabase();
   const payload = {
-    log_date: calDateEl.value || todayStr(),
+    log_date: state.selectedDate,
     event_title: document.getElementById('schTitle').value.trim(),
     start_time: document.getElementById('schStart').value || null,
     end_time: document.getElementById('schEnd').value || null,
@@ -486,7 +680,7 @@ document.getElementById('formSchedule').addEventListener('submit', async (e) => 
 
 async function loadSchedule() {
   if (!state.supabase) return;
-  const date = calDateEl.value || todayStr();
+  const date = state.selectedDate;
   const { data, error } = await state.supabase
     .from('daily_schedules').select('*').eq('log_date', date).order('start_time', { ascending: true });
   if (error) return toast('일정 로드 실패: ' + error.message);
@@ -498,7 +692,7 @@ async function loadSchedule() {
 
   data.filter(r => r.event_title).forEach(r => {
     const div = document.createElement('div');
-    div.className = 'bg-panel rounded-xl px-4 py-2.5 flex items-center justify-between text-sm';
+    div.className = 'bg-panel2 rounded-xl px-4 py-2.5 flex items-center justify-between text-sm';
     div.innerHTML = `<span>${r.start_time ? r.start_time.slice(0,5) : '--:--'}${r.end_time ? '~' + r.end_time.slice(0,5) : ''} · ${escapeHtml(r.event_title)}</span>
       <button data-id="${r.id}" class="btnDelSch text-red-400 text-xs">삭제</button>`;
     list.appendChild(div);
@@ -513,7 +707,7 @@ document.getElementById('btnSaveTimeline').addEventListener('click', async () =>
   const sb = requireSupabase();
   const text = document.getElementById('timelineText').value.trim();
   if (!text) return toast('타임라인 내용을 입력하세요.');
-  const date = calDateEl.value || todayStr();
+  const date = state.selectedDate;
 
   const { error } = await sb.from('daily_schedules').insert({
     log_date: date, event_type: 'manual', raw_timeline_text: text,
@@ -523,10 +717,130 @@ document.getElementById('btnSaveTimeline').addEventListener('click', async () =>
   try {
     await saveContextMemory(date, 'timeline', text);
     toast('타임라인이 저장되고 벡터 인덱싱되었습니다.');
+    loadMonthEventDates();
   } catch (e) {
     toast('타임라인은 저장됐지만 벡터 인덱싱 실패: ' + e.message);
   }
 });
+
+/* ---------- 할 일 (마감 기한 기반) ---------- */
+document.getElementById('formTask').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const sb = requireSupabase();
+  const title = document.getElementById('taskTitle').value.trim();
+  if (!title) return toast('할 일 제목을 입력하세요.');
+  const payload = {
+    title,
+    deadline_date: document.getElementById('taskDeadline').value || null,
+    category: document.getElementById('taskCategory').value,
+  };
+  const { error } = await sb.from('tasks').insert(payload);
+  if (error) return toast('저장 실패: ' + error.message);
+  e.target.reset();
+  toast('할 일이 추가되었습니다.');
+  loadTasks();
+});
+
+function daysUntil(dateStr) {
+  if (!dateStr) return null;
+  const diffMs = new Date(dateStr + 'T00:00:00') - new Date(todayStr() + 'T00:00:00');
+  return Math.round(diffMs / 86400000);
+}
+
+async function loadTasks() {
+  if (!state.supabase) return;
+  const { data, error } = await state.supabase
+    .from('tasks').select('*').eq('status', 'pending').order('deadline_date', { ascending: true, nullsFirst: false });
+  if (error) return toast('할 일 로드 실패: ' + error.message);
+
+  const catLabel = { study: '학업', fitness: '운동', other: '기타' };
+  const list = document.getElementById('taskList');
+  list.innerHTML = '';
+  if (!data.length) {
+    list.innerHTML = '<div class="text-xs text-slate-500">등록된 할 일이 없습니다.</div>';
+    return;
+  }
+  data.forEach(t => {
+    const dLeft = daysUntil(t.deadline_date);
+    const urgent = dLeft != null && dLeft <= 2;
+    const div = document.createElement('div');
+    div.className = 'bg-panel2 rounded-xl p-3 space-y-1.5';
+    div.innerHTML = `
+      <div class="flex items-start justify-between gap-2">
+        <div>
+          <p class="text-sm font-semibold">${escapeHtml(t.title)} <span class="text-[10px] text-slate-500">[${catLabel[t.category] || '기타'}]</span></p>
+          <p class="text-[11px] ${urgent ? 'text-red-400' : 'text-slate-500'}">${t.deadline_date ? `${t.deadline_date}까지${dLeft != null ? ` (D${dLeft >= 0 ? '-' + dLeft : '+' + (-dLeft)})` : ''}` : '마감일 미정'}</p>
+        </div>
+        <div class="flex gap-1 shrink-0">
+          <button data-id="${t.id}" class="btnTaskDone text-[11px] bg-panel rounded-lg px-2 py-1">완료</button>
+          <button data-id="${t.id}" class="btnTaskDel text-[11px] bg-panel rounded-lg px-2 py-1 text-red-400">삭제</button>
+        </div>
+      </div>
+      ${t.ai_suggestion ? `<p class="text-xs bg-panel rounded-lg p-2 text-accent">🤖 ${escapeHtml(t.ai_suggestion)}</p>` : ''}
+      <button data-id="${t.id}" class="btnTaskSuggest w-full text-[11px] bg-panel hover:bg-white/10 rounded-lg py-1.5 font-semibold">🤖 AI에게 언제 할지 추천받기</button>
+    `;
+    list.appendChild(div);
+  });
+
+  list.querySelectorAll('.btnTaskDone').forEach(b => b.addEventListener('click', async () => {
+    await state.supabase.from('tasks').update({ status: 'done' }).eq('id', b.dataset.id);
+    loadTasks();
+  }));
+  list.querySelectorAll('.btnTaskDel').forEach(b => b.addEventListener('click', async () => {
+    await state.supabase.from('tasks').delete().eq('id', b.dataset.id);
+    loadTasks();
+  }));
+  list.querySelectorAll('.btnTaskSuggest').forEach(b => b.addEventListener('click', () => requestTaskSuggestion(b.dataset.id, b)));
+}
+
+// 확정 일정(daily_schedules)의 빈 시간을 고려해 "언제 하면 좋을지" 제안받고 tasks.ai_suggestion에 캐시
+async function requestTaskSuggestion(taskId, buttonEl) {
+  const sb = requireSupabase();
+  if (!state.settings.geminiKey || !state.settings.chatModel) return toast('설정에서 Gemini API Key와 모델명을 먼저 입력하세요.');
+
+  const originalLabel = buttonEl.textContent;
+  buttonEl.textContent = '추천 생성 중...';
+  buttonEl.disabled = true;
+  try {
+    const { data: task } = await sb.from('tasks').select('*').eq('id', taskId).single();
+    const today = todayStr();
+    const rangeEnd = task.deadline_date && task.deadline_date >= today ? task.deadline_date : daysAgoStr(-14);
+
+    const [{ data: sch }, { data: otherTasks }, { data: goals }] = await Promise.all([
+      sb.from('daily_schedules').select('*').gte('log_date', today).lte('log_date', rangeEnd).order('log_date'),
+      sb.from('tasks').select('title, deadline_date, category').eq('status', 'pending').neq('id', taskId),
+      sb.from('goals').select('title, category, period_text').eq('status', 'active'),
+    ]);
+
+    const scheduleLines = (sch || []).length
+      ? sch.map(s => s.event_title
+          ? `- ${s.log_date} ${s.start_time || ''}~${s.end_time || ''} ${s.event_title}`
+          : `- ${s.log_date} (자유 메모) ${s.raw_timeline_text || ''}`).join('\n')
+      : '- 해당 기간에 등록된 확정 일정 없음';
+    const otherTaskLines = (otherTasks || []).length
+      ? otherTasks.map(t => `- ${t.title} (마감 ${t.deadline_date || '미정'})`).join('\n') : '- 없음';
+    const goalLines = (goals || []).length
+      ? goals.map(g => `- ${g.title} (${g.period_text || '기간 미정'})`).join('\n') : '- 없음';
+
+    const systemPrompt = `당신은 일정 조율에 능한 AI 비서입니다. 아래 '할 일'을 오늘(${today})부터 마감일(${task.deadline_date || '미정'})까지의 확정 일정 사이 빈 시간에 언제 하면 좋을지 구체적으로 제안하세요.
+운동처럼 시간이 촉박하면 "몇 월 며칠 몇 시~몇 시, ○○ 일정과 ○○ 일정 사이" 처럼 구체적인 시간대와 형식(예: 30분 홈트, 점심 이동시간 활용 등)까지 제안하세요.
+
+[할 일] ${task.title} (카테고리: ${task.category})
+[해당 기간 확정 일정]\n${scheduleLines}
+[다른 대기 중인 할 일]\n${otherTaskLines}
+[활성 목표]\n${goalLines}
+
+2~4문장으로 간결하고 실행 가능하게 한국어로 답하세요.`;
+
+    const reply = await callChatLLM(systemPrompt, [{ role: 'user', content: '이 할 일을 언제 하면 좋을지 추천해줘.' }]);
+    await sb.from('tasks').update({ ai_suggestion: reply }).eq('id', taskId);
+    loadTasks();
+  } catch (e) {
+    toast('추천 생성 실패: ' + e.message);
+    buttonEl.textContent = originalLabel;
+    buttonEl.disabled = false;
+  }
+}
 
 /* ============================================================
    5. 수치 기록 (운동/식단/체중/영양제/학업) + 차트
@@ -733,11 +1047,13 @@ async function extractAndStore(userText, date) {
  "body_metrics": {"weight_kg": number|null, "body_fat_pct": number|null, "skeletal_muscle_kg": number|null} | null,
  "supplements": [{"supplement_name": string, "taken": boolean}],
  "study": [{"subject": string, "hours": number|null, "progress_note": string|null}],
+ "tasks": [{"title": string, "deadline_date": "YYYY-MM-DD"|null, "category": "study"|"fitness"|"other"}],
  "context_note": string | null,
  "context_type": "fatigue"|"thought"|"study_concern"|"question"|"chat"|null
 }
 규칙:
-- 사용자 메시지에 언급되지 않은 항목은 workout/diet/supplements/study는 빈 배열 [], body_metrics는 null 로 둡니다.
+- 사용자 메시지에 언급되지 않은 항목은 workout/diet/supplements/study/tasks는 빈 배열 [], body_metrics는 null 로 둡니다.
+- tasks 는 "언제까지 ~해야 한다"처럼 마감 기한이 있는 할 일을 언급했을 때만 채웁니다. deadline_date는 상대 표현("이번 주 금요일까지" 등)이어도 오늘 날짜 기준으로 실제 YYYY-MM-DD로 환산합니다.
 - context_note 에는 피로도, 컨디션, 사소한 생각, 학업 고민, 질문 등 수치화되지 않는 맥락 내용을 자연어 그대로 담습니다. 그런 내용이 전혀 없으면 null.
 - 숫자는 반드시 숫자 타입으로, 단위는 붙이지 않습니다.
 - 오늘 날짜는 ${date} 입니다.`;
@@ -749,7 +1065,7 @@ async function extractAndStore(userText, date) {
     parsed = JSON.parse(cleaned);
   } catch (e) {
     console.warn('구조화 추출 실패, 원문을 맥락으로만 저장합니다.', e);
-    parsed = { workout: [], diet: [], body_metrics: null, supplements: [], study: [], context_note: userText, context_type: 'chat' };
+    parsed = { workout: [], diet: [], body_metrics: null, supplements: [], study: [], tasks: [], context_note: userText, context_type: 'chat' };
   }
 
   const sb = requireSupabase();
@@ -769,6 +1085,9 @@ async function extractAndStore(userText, date) {
   }
   if (Array.isArray(parsed.study) && parsed.study.length) {
     inserts.push(sb.from('study_logs').insert(parsed.study.map(s => ({ ...s, log_date: date }))));
+  }
+  if (Array.isArray(parsed.tasks) && parsed.tasks.length) {
+    inserts.push(sb.from('tasks').insert(parsed.tasks.map(t => ({ ...t, status: 'pending' }))));
   }
   await Promise.all(inserts);
 
@@ -804,6 +1123,7 @@ async function buildCoachingContext(date, queryTextForVectorSearch) {
     { data: dietRecent },
     { data: studyRecent },
     { data: suppRecent },
+    { data: pendingTasks },
   ] = await Promise.all([
     sb.from('goals').select('*').eq('status', 'active').order('created_at', { ascending: false }),
     sb.from('daily_schedules').select('*').eq('log_date', date),
@@ -812,6 +1132,7 @@ async function buildCoachingContext(date, queryTextForVectorSearch) {
     sb.from('diet_logs').select('*').gte('log_date', since7).order('log_date'),
     sb.from('study_logs').select('*').gte('log_date', since7).order('log_date'),
     sb.from('supplement_logs').select('*').gte('log_date', since7),
+    sb.from('tasks').select('*').eq('status', 'pending').order('deadline_date', { ascending: true, nullsFirst: false }),
   ]);
 
   let memories = [];
@@ -844,8 +1165,11 @@ async function buildCoachingContext(date, queryTextForVectorSearch) {
   const lines = [];
   lines.push(`[오늘 날짜] ${date}`);
   lines.push(`[활성 목표]\n` + (goals && goals.length
-    ? goals.map(g => `- ${g.title} (${g.start_date}~${g.end_date || '미정'})${g.description ? ' : ' + g.description : ''}`).join('\n')
+    ? goals.map(g => `- (${g.category}) ${g.title} — 기간: ${g.period_text || g.end_date || '미정'}${g.description ? ' / ' + g.description : ''}`).join('\n')
     : '- 등록된 활성 목표 없음'));
+  lines.push(`[마감 기한이 있는 할 일 — 아래 일정 사이 빈 시간에 언제 하면 좋을지 적극적으로 조언에 반영]\n` + (pendingTasks && pendingTasks.length
+    ? pendingTasks.map(t => `- ${t.title} (${t.category}) — 마감: ${t.deadline_date || '미정'}${t.ai_suggestion ? ` / 이전 AI 제안: ${t.ai_suggestion}` : ''}`).join('\n')
+    : '- 등록된 할 일 없음'));
 
   const todayEvents = (todaySchedule || []).filter(s => s.event_title);
   const todayTimeline = (todaySchedule || []).find(s => s.raw_timeline_text);
@@ -994,6 +1318,7 @@ async function sendChat() {
     await sb.from('chat_history').insert({ role: 'assistant', content: reply });
     document.getElementById('chatLog').scrollTop = document.getElementById('chatLog').scrollHeight;
     refreshCharts();
+    loadTasks();
   } catch (e) {
     console.error(e);
     loadingBubble.textContent = '⚠️ 오류: ' + e.message;
@@ -1019,6 +1344,9 @@ if (!state.settings.sbUrl) {
   setTimeout(() => { document.getElementById('btnSettings').click(); toast('먼저 설정에서 Supabase / API Key를 입력해주세요.'); }, 300);
 } else {
   loadGoals();
+  renderCalendar();
+  loadDayDetail();
+  loadTasks();
 }
 </script>
 </body>
